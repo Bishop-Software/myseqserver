@@ -79,7 +79,7 @@ bool EQGameScanner::executableExists() const
 	return false;
 }
 
-DWORD EQGameScanner::findEQPointerOffset(DWORD startAddress, std::size_t blockSize, const PBYTE byteMask, const PCHAR charMask)
+QWORD EQGameScanner::findEQPointerOffset(QWORD startAddress, std::size_t blockSize, const PBYTE byteMask, const PCHAR charMask)
 {
 	std::ifstream file(executablePath.c_str(), std::ios::in | std::ios::binary);
 
@@ -96,7 +96,7 @@ DWORD EQGameScanner::findEQPointerOffset(DWORD startAddress, std::size_t blockSi
 
 	// Setup our temporary storage variables
 	PBYTE buffer = new BYTE[blockSize];
-	DWORD matchAddr = NULL;
+	QWORD matchAddr = NULL;
 
 	// I like clean memory.
 	memset(buffer, 0, blockSize);
@@ -108,18 +108,20 @@ DWORD EQGameScanner::findEQPointerOffset(DWORD startAddress, std::size_t blockSi
 
 	// Search for a position that fits our masks in memory.
 	// Thanks to dom1n1k for the piece of code this is based off of.
-	for (DWORD i = 0; i < blockSize; ++i)
+	for (QWORD i = 0; i < blockSize; ++i)
 	{
 		if (compareData(buffer + i, byteMask, charMask))
 		{
-			DWORD checkRet;
+			QWORD checkRet;
 			matchAddr = i;
 			if (typelen == 1) {
 				BYTE chechbyteRet = *reinterpret_cast<PBYTE>(buffer + matchAddr + std::string(charMask).find_first_of("t"));
-				checkRet = (DWORD) chechbyteRet;
+				checkRet = (QWORD) chechbyteRet;
 			} else if (typelen == 2) {
 				WORD checkwordRet = *reinterpret_cast<PWORD>(buffer + matchAddr + std::string(charMask).find_first_of("t"));
-				checkRet = (DWORD) checkwordRet;
+				checkRet = (QWORD) checkwordRet;
+			} else if (typelen >= 8) {
+				checkRet = *reinterpret_cast<PQWORD>(buffer + matchAddr + std::string(charMask).find_first_of("t"));
 			} else {
 				checkRet = *reinterpret_cast<PDWORD>(buffer + matchAddr + std::string(charMask).find_first_of("t"));
 			}
@@ -135,15 +137,17 @@ DWORD EQGameScanner::findEQPointerOffset(DWORD startAddress, std::size_t blockSi
 	if (matchAddr == NULL)
 		return NULL;
 
-	DWORD nRet;
+	QWORD nRet;
 
 	// Find where our target address we're searching for is stored, and return its value.
 	if (typelen == 1) {
 		BYTE cRet = *reinterpret_cast<PBYTE>(buffer + matchAddr + std::string(charMask).find_first_of("t"));
-		nRet = (DWORD) cRet;
+		nRet = (QWORD) cRet;
 	} else if (typelen == 2) {
 		WORD wRet = *reinterpret_cast<PWORD>(buffer + matchAddr + std::string(charMask).find_first_of("t"));
-		nRet = (DWORD) wRet;
+		nRet = (QWORD) wRet;
+	} else if (typelen >= 8) {
+		nRet = *reinterpret_cast<PQWORD>(buffer + matchAddr + std::string(charMask).find_first_of("t"));
 	} else {
 		nRet = *reinterpret_cast<PDWORD>(buffer + matchAddr + std::string(charMask).find_first_of("t"));
 	}
@@ -152,9 +156,9 @@ DWORD EQGameScanner::findEQPointerOffset(DWORD startAddress, std::size_t blockSi
 	return nRet;
 }
 
-DWORD EQGameScanner::findEQStructureOffset(DWORD startAddress, std::size_t blockSize, const PBYTE byteMask, const PCHAR charMask, const QWORD baseEQPointerAddress)
+QWORD EQGameScanner::findEQStructureOffset(QWORD startAddress, std::size_t blockSize, const PBYTE byteMask, const PCHAR charMask, const QWORD baseEQPointerAddress)
 {
-	DWORD nRet = 0;
+	QWORD nRet = 0;
 
 	if (strlen(charMask) == 0)
 		return nRet;
@@ -198,8 +202,8 @@ bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, Netwo
 	bool reload = false;
 
 	// We'll use this for comparisons
-	DWORD matchAddr = NULL;
-	
+	QWORD matchAddr = NULL;
+
 	std::ostringstream findResults;
 	std::ostringstream outputStream;
 
@@ -272,7 +276,7 @@ bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, Netwo
 		outputStream << " #Not Found\r\n";
 	}
 
-	mystart = (DWORD) ir_intf->readIntegerEntry("SpawnHeaderAddr","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("SpawnHeaderAddr","Start",true);
 	mypattern = ir_intf->readEscapeStrings("SpawnHeaderAddr", "Pattern");
 	mymask = ir_intf->readStringEntry("SpawnHeaderAddr", "Mask", true);
 
@@ -314,7 +318,7 @@ bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, Netwo
 		outputStream << " #Not Found\r\n";
 	}
 
-	mystart = (DWORD) ir_intf->readIntegerEntry("CharInfo","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("CharInfo","Start",true);
 	mypattern = ir_intf->readEscapeStrings("CharInfo", "Pattern");
 	mymask = ir_intf->readStringEntry("CharInfo", "Mask", true);
 
@@ -355,7 +359,7 @@ bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, Netwo
 		outputStream << " #Not Found\r\n";
 	}
 
-	mystart = (DWORD) ir_intf->readIntegerEntry("ItemsAddr","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("ItemsAddr","Start",true);
 	mypattern = ir_intf->readEscapeStrings("ItemsAddr", "Pattern");
 	mymask = ir_intf->readStringEntry("ItemsAddr", "Mask", true);
 
@@ -396,7 +400,7 @@ bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, Netwo
 		outputStream << " #Not Found\r\n";
 	}
 
-	mystart = (DWORD) ir_intf->readIntegerEntry("TargetAddr","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("TargetAddr","Start",true);
 	mypattern = ir_intf->readEscapeStrings("TargetAddr", "Pattern");
 	mymask = ir_intf->readStringEntry("TargetAddr", "Mask", true);
 
@@ -437,7 +441,7 @@ bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, Netwo
 		outputStream << " #Not Found\r\n";
 	}
 
-	mystart = (DWORD) ir_intf->readIntegerEntry("WorldAddr","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("WorldAddr","Start",true);
 	mypattern = ir_intf->readEscapeStrings("WorldAddr", "Pattern");
 	mymask = ir_intf->readStringEntry("WorldAddr", "Mask", true);
 
@@ -552,7 +556,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 	// SpawnInfo::PrevOffset
 	matchAddr = 0;
-	mystart = (DWORD) ir_intf->readIntegerEntry("SpawnInfoPrevOffset","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("SpawnInfoPrevOffset","Start",true);
 	mypattern = ir_intf->readEscapeStrings("SpawnInfoPrevOffset", "Pattern");
 	mymask = ir_intf->readStringEntry("SpawnInfoPrevOffset", "Mask", true);
 
@@ -565,7 +569,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 	// SpawnInfo::LastnameOffset
 	matchAddr = 0;
-	mystart = (DWORD) ir_intf->readIntegerEntry("SpawnInfoLastnameOffset","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("SpawnInfoLastnameOffset","Start",true);
 	mypattern = ir_intf->readEscapeStrings("SpawnInfoLastnameOffset", "Pattern");
 	mymask = ir_intf->readStringEntry("SpawnInfoLastnameOffset", "Mask", true);
 
@@ -578,7 +582,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 	// SpawnInfo::XOffset
 	matchAddr = 0;
-	mystart = (DWORD) ir_intf->readIntegerEntry("SpawnInfoXOffset","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("SpawnInfoXOffset","Start",true);
 	mypattern = ir_intf->readEscapeStrings("SpawnInfoXOffset", "Pattern");
 	mymask = ir_intf->readStringEntry("SpawnInfoXOffset", "Mask", true);
 
@@ -591,7 +595,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 	// SpawnInfo::YOffset
 	matchAddr = 0;
-	mystart = (DWORD) ir_intf->readIntegerEntry("SpawnInfoYOffset","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("SpawnInfoYOffset","Start",true);
 	mypattern = ir_intf->readEscapeStrings("SpawnInfoYOffset", "Pattern");
 	mymask = ir_intf->readStringEntry("SpawnInfoYOffset", "Mask", true);
 
@@ -604,7 +608,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 	// SpawnInfo::ZOffset
 	matchAddr = 0;
-	mystart = (DWORD) ir_intf->readIntegerEntry("SpawnInfoZOffset","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("SpawnInfoZOffset","Start",true);
 	mypattern = ir_intf->readEscapeStrings("SpawnInfoZOffset", "Pattern");
 	mymask = ir_intf->readStringEntry("SpawnInfoZOffset", "Mask", true);
 
@@ -617,7 +621,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 	// SpawnInfo::SpeedOffset
 	matchAddr = 0;
-	mystart = (DWORD) ir_intf->readIntegerEntry("SpawnInfoSpeedOffset","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("SpawnInfoSpeedOffset","Start",true);
 	mypattern = ir_intf->readEscapeStrings("SpawnInfoSpeedOffset", "Pattern");
 	mymask = ir_intf->readStringEntry("SpawnInfoSpeedOffset", "Mask", true);
 
@@ -630,7 +634,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 	// SpawnInfo::HeadingOffset
 	matchAddr = 0;
-	mystart = (DWORD) ir_intf->readIntegerEntry("SpawnInfoHeadingOffset","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("SpawnInfoHeadingOffset","Start",true);
 	mypattern = ir_intf->readEscapeStrings("SpawnInfoHeadingOffset", "Pattern");
 	mymask = ir_intf->readStringEntry("SpawnInfoHeadingOffset", "Mask", true);
 
@@ -643,7 +647,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 	// SpawnInfo::NameOffset
 	matchAddr = 0;
-	mystart = (DWORD) ir_intf->readIntegerEntry("SpawnInfoNameOffset","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("SpawnInfoNameOffset","Start",true);
 	mypattern = ir_intf->readEscapeStrings("SpawnInfoNameOffset", "Pattern");
 	mymask = ir_intf->readStringEntry("SpawnInfoNameOffset", "Mask", true);
 
@@ -656,7 +660,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 	// SpawnInfo::TypeOffset
 	matchAddr = 0;
-	mystart = (DWORD) ir_intf->readIntegerEntry("SpawnInfoTypeOffset","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("SpawnInfoTypeOffset","Start",true);
 	mypattern = ir_intf->readEscapeStrings("SpawnInfoTypeOffset", "Pattern");
 	mymask = ir_intf->readStringEntry("SpawnInfoTypeOffset", "Mask", true);
 
@@ -669,7 +673,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 	// SpawnInfo::SpawnIDOffset
 	matchAddr = 0;
-	mystart = (DWORD) ir_intf->readIntegerEntry("SpawnInfoSpawnIDOffset","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("SpawnInfoSpawnIDOffset","Start",true);
 	mypattern = ir_intf->readEscapeStrings("SpawnInfoSpawnIDOffset", "Pattern");
 	mymask = ir_intf->readStringEntry("SpawnInfoSpawnIDOffset", "Mask", true);
 
@@ -682,7 +686,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 	// SpawnInfo::OwnerIDOffset
 	matchAddr = 0;
-	mystart = (DWORD) ir_intf->readIntegerEntry("SpawnInfoOwnerIDOffset","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("SpawnInfoOwnerIDOffset","Start",true);
 	mypattern = ir_intf->readEscapeStrings("SpawnInfoOwnerIDOffset", "Pattern");
 	mymask = ir_intf->readStringEntry("SpawnInfoOwnerIDOffset", "Mask", true);
 
@@ -695,7 +699,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 	// SpawnInfo::HideOffset
 	matchAddr = 0;
-	mystart = (DWORD) ir_intf->readIntegerEntry("SpawnInfoHideOffset","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("SpawnInfoHideOffset","Start",true);
 	mypattern = ir_intf->readEscapeStrings("SpawnInfoHideOffset", "Pattern");
 	mymask = ir_intf->readStringEntry("SpawnInfoHideOffset", "Mask", true);
 
@@ -708,7 +712,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 	// SpawnInfo::Prev
 	matchAddr = 0;
-	mystart = (DWORD) ir_intf->readIntegerEntry("SpawnInfoLevelOffset","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("SpawnInfoLevelOffset","Start",true);
 	mypattern = ir_intf->readEscapeStrings("SpawnInfoLevelOffset", "Pattern");
 	mymask = ir_intf->readStringEntry("SpawnInfoLevelOffset", "Mask", true);
 
@@ -721,7 +725,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 	// SpawnInfo::Prev
 	matchAddr = 0;
-	mystart = (DWORD) ir_intf->readIntegerEntry("SpawnInfoRaceOffset","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("SpawnInfoRaceOffset","Start",true);
 	mypattern = ir_intf->readEscapeStrings("SpawnInfoRaceOffset", "Pattern");
 	mymask = ir_intf->readStringEntry("SpawnInfoRaceOffset", "Mask", true);
 
@@ -735,7 +739,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 	// SpawnInfo::ClassOffset
 	matchAddr = 0;
-	mystart = (DWORD) ir_intf->readIntegerEntry("SpawnInfoClassOffset","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("SpawnInfoClassOffset","Start",true);
 	mypattern = ir_intf->readEscapeStrings("SpawnInfoClassOffset", "Pattern");
 	mymask = ir_intf->readStringEntry("SpawnInfoClassOffset", "Mask", true);
 
@@ -748,7 +752,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 	// SpawnInfo::PrimaryOffset
 	matchAddr = 0;
-	mystart = (DWORD) ir_intf->readIntegerEntry("SpawnInfoPrimaryOffset","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("SpawnInfoPrimaryOffset","Start",true);
 	mypattern = ir_intf->readEscapeStrings("SpawnInfoPrimaryOffset", "Pattern");
 	mymask = ir_intf->readStringEntry("SpawnInfoPrimaryOffset", "Mask", true);
 
@@ -761,7 +765,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 	// SpawnInfo::OffhandOffset
 	matchAddr = 0;
-	mystart = (DWORD) ir_intf->readIntegerEntry("SpawnInfoOffhandOffset","Start",true);
+	mystart = (QWORD) ir_intf->readIntegerEntry("SpawnInfoOffhandOffset","Start",true);
 	mypattern = ir_intf->readEscapeStrings("SpawnInfoOffhandOffset", "Pattern");
 	mymask = ir_intf->readStringEntry("SpawnInfoOffhandOffset", "Mask", true);
 

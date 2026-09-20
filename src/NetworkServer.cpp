@@ -339,9 +339,9 @@ void NetworkServer::enterReceiveLoop(MemReaderInterface* mr_intf)
 	}
 }
 
-UINT NetworkServer::current_offset(int type)
-{ 
-		return (UINT)offsets[(offset_types)type]; 
+QWORD NetworkServer::current_offset(int type)
+{
+		return offsets[(offset_types)type];
 }
 
 bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
@@ -380,7 +380,7 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 				SetDlgItemText(h_MySEQServer, IDC_TEXT_NAME, _T(""));
 				break;
 			}
-			if (!mr_intf->openNextProcess("eqgame"), false)
+			if (!mr_intf->openNextProcess("eqgame"))
 				break;
 		}
 		if (mr_intf->getCurrentPID() != (DWORD)clientRequest)

@@ -43,7 +43,7 @@ class NetworkServerInterface
 
 public:
 
-	virtual UINT current_offset(int type) = 0;
+	virtual QWORD current_offset(int type) = 0;
 };
 
 class NetworkServer : public NetworkServerInterface
@@ -172,7 +172,7 @@ public:
 
 	string getCharName(MemReaderInterface* mr_intf);
 
-	UINT current_offset(int type);
+	QWORD current_offset(int type);
 
 };
 

@@ -35,8 +35,8 @@ public:
 public:
 	bool executableExists() const;
 	void setExe(TCHAR* str);
-	DWORD findEQPointerOffset(DWORD startAddress, std::size_t blockSize, const PBYTE byteMask, const PCHAR charMask);
-	DWORD findEQStructureOffset(DWORD startAddress, std::size_t blockSize, const PBYTE byteMask, const PCHAR charMask, const QWORD baseEQPointerAddress);
+	QWORD findEQPointerOffset(QWORD startAddress, std::size_t blockSize, const PBYTE byteMask, const PCHAR charMask);
+	QWORD findEQStructureOffset(QWORD startAddress, std::size_t blockSize, const PBYTE byteMask, const PCHAR charMask, const QWORD baseEQPointerAddress);
 	bool ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, NetworkServerInterface* net_intf, bool write_out = false);
 	void ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, NetworkServerInterface* net_intf);
 
