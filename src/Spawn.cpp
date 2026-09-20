@@ -35,6 +35,11 @@ Spawn::Spawn(void)
 	largestOffset = 0;
 }
 
+Spawn::~Spawn()
+{
+	delete[] rawBuffer;
+}
+
 void Spawn::setOffset(offset_types ot, UINT value, string ptrName)
 
 {
@@ -105,6 +110,7 @@ void Spawn::init(IniReaderInterface* ir_intf)
 
 	// The raw buffer is what where we dump raw data from the EQ process into
 
+	delete[] rawBuffer;
 	rawBuffer = new char[largestOffset];
 
 	cout << "Spawn: Spawn Offsets read in." << endl;
@@ -194,7 +200,7 @@ void Spawn::packNetBufferEmpty(UINT flags, QWORD _this)
 	tempNetBuffer.id = 99999;
 }
 
-void Spawn::packNetBufferFrom(Item item)
+void Spawn::packNetBufferFrom(const Item& item)
 
 {
 
@@ -209,7 +215,7 @@ void Spawn::packNetBufferFrom(Item item)
 	tempNetBuffer.id = item.tempItemBuffer.id;
 }
 
-void Spawn::packNetBufferWorld(World world)
+void Spawn::packNetBufferWorld(const World& world)
 
 {
 

@@ -186,6 +186,10 @@ public:
 	string ptrNames[OT_max];
 
 	Spawn(void);
+	~Spawn();
+
+	Spawn(const Spawn&) = delete;
+	Spawn& operator=(const Spawn&) = delete;
 
 	void setOffset(offset_types ot, UINT value, string ptrName);
 
@@ -233,9 +237,9 @@ public:
 
 	/* convert other structures into spawn structures for shipping across the network */
 
-	void packNetBufferFrom(Item item);
+	void packNetBufferFrom(const Item& item);
 
-	void packNetBufferWorld(World world);
+	void packNetBufferWorld(const World& world);
 
 private:
 	bool race8{};
