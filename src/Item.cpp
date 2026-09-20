@@ -33,6 +33,11 @@ Item::Item(void)
 	largestOffset = 0;
 }
 
+Item::~Item()
+{
+	delete[] rawBuffer;
+}
+
 void Item::init(IniReaderInterface* ir_intf)
 
 {
@@ -72,6 +77,7 @@ void Item::init(IniReaderInterface* ir_intf)
 
 	// We use this to store the raw data from the EQ process
 
+	delete[] rawBuffer;
 	rawBuffer = new char[largestOffset];
 
 	cout << "Item: GroundItem Offsets read in." << endl;
