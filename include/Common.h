@@ -34,8 +34,6 @@
 
 #pragma once
 
-
-
 #include <windows.h>
 
 #include <string>
@@ -54,29 +52,24 @@
 
 #include <math.h>
 
-
-
 using namespace std;
-
-
 
 #define EXCLEV_WARNING 1
 
 #define EXCLEV_ERROR 2
-
-
 
 class Exception : public string
 
 {
 
 private:
-
 	int level;
 
 public:
-
-	Exception(int l, string s) : level(l), string(s){;}
-
+	Exception(int l, string s) :
+		level(l),
+		string(s)
+	{
+		;
+	}
 };
-

@@ -1,4 +1,4 @@
-/* 
+/*
  * Smart EQ Offset Finder - GPL Edition
  * Copyright 2007-2009, Carpathian <Carpathian01@gmail.com>
  *

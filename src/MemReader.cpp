@@ -24,13 +24,13 @@
 
 #include <Psapi.h>
 
-
-
 // Runtime debug macros
 
+// clang-format off
 #define RTDEBUG(...) if (debug) cout << __VA_ARGS__ << endl
+// clang-format on
 
-#define TO_LOWER(str) (transform(str.begin(), str.end(), str.begin(), (int(*)(int))tolower))
+#define TO_LOWER(str) (transform(str.begin(), str.end(), str.begin(), (int (*)(int))tolower))
 
 typedef uint64_t QWORD;
 
@@ -39,8 +39,6 @@ typedef uint64_t QWORD;
 // process. Kept as a single constant so the declared buffer and the amount
 // actually read from the process can't drift apart.
 static const size_t kNameBufLen = 30;
-
-
 
 MemReader::MemReader() :
 
@@ -53,22 +51,17 @@ MemReader::MemReader() :
 	readCount(0)
 
 {
-	currentEQProcessID = 0;
-	currentEQProcessHandle = NULL;
+	currentEQProcessID			= 0;
+	currentEQProcessHandle		= NULL;
 	currentEQProcessBaseAddress = 0x140000000;
 }
-
-
 
 MemReader::~MemReader()
 
 {
 
 	closeProcess();
-
 }
-
-
 
 bool MemReader::isValid()
 
@@ -76,18 +69,14 @@ bool MemReader::isValid()
 	if (currentEQProcessID == 0)
 		return false;
 
-	return ( validateProcess(false) );
-
+	return (validateProcess(false));
 }
-
-
 
 DWORD MemReader::getCurrentPID()
 
 {
 
 	return currentEQProcessID;
-
 }
 
 QWORD MemReader::getCurrentBaseAddress()
@@ -95,14 +84,12 @@ QWORD MemReader::getCurrentBaseAddress()
 {
 
 	return currentEQProcessBaseAddress;
-
 }
 
 HANDLE MemReader::getCurrentHandle()
 {
 
 	return currentEQProcessHandle;
-
 }
 
 void MemReader::enableDebugPrivileges()
@@ -119,13 +106,9 @@ void MemReader::enableDebugPrivileges()
 
 	DWORD Bufferlen;
 
-
-
 	OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES ^ TOKEN_QUERY, &hToken);
 
 	LookupPrivilegeValue(NULL, SE_DEBUG_NAME, &ALUID);
-
-
 
 	TP.PrivilegeCount = 1;
 
@@ -133,15 +116,10 @@ void MemReader::enableDebugPrivileges()
 
 	TP.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
 
-
-
 	AdjustTokenPrivileges(hToken, false, &TP, sizeof(OldTP), &OldTP, &Bufferlen);
 
 	CloseHandle(hToken);
-
 }
-
-
 
 /* Find the first process to match the given filename */
 
@@ -156,10 +134,7 @@ bool MemReader::openFirstProcess(string filename, bool debug)
 	currentEQProcessBaseAddress = 0x140000000;
 
 	return openProcess(filename, true, debug);
-
 }
-
-
 
 /* Find the next process to match the given filename */
 
@@ -168,12 +143,7 @@ bool MemReader::openNextProcess(string filename, bool debug)
 {
 
 	return openProcess(filename, false, debug);
-
 }
-
-
-
-
 
 /* Find the first process to match the given filename */
 
@@ -181,45 +151,37 @@ bool MemReader::openProcess(string filename, bool first, bool debug)
 
 {
 
-	HANDLE hProcessSnap = NULL; 
+	HANDLE hProcessSnap = NULL;
 
-	PROCESSENTRY32 pe32 = {0}; 
+	PROCESSENTRY32 pe32 = {0};
 
 	bool okToAttach = first;
 
 	bool rtn = false;
 
-	
+	//  Fill in the size of the structure before using it.
 
-	//  Fill in the size of the structure before using it. 
-
-	pe32.dwSize = sizeof(PROCESSENTRY32); 
-
-		
+	pe32.dwSize = sizeof(PROCESSENTRY32);
 
 	RTDEBUG("Looking for process with name: " << filename);
 
 	TO_LOWER(filename);
 
-	
+	//  Take a snapshot of all processes in the system.
 
-	//  Take a snapshot of all processes in the system. 
-
-	hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0); 
+	hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 
 	RTDEBUG("hProcessSnap is 0x" << hex << hProcessSnap);
-
-	
 
 	// Walk thru each process looking for the given filename
 
 	if (Process32First(hProcessSnap, &pe32))
 
-	{ 
+	{
 
-		do 
+		do
 
-		{ 
+		{
 
 			string procExe(pe32.szExeFile);
 
@@ -227,9 +189,7 @@ bool MemReader::openProcess(string filename, bool first, bool debug)
 
 			TO_LOWER(procExe);
 
-			
-
-			if (procExe.find(filename.c_str()) != string::npos )
+			if (procExe.find(filename.c_str()) != string::npos)
 
 			{
 
@@ -241,52 +201,44 @@ bool MemReader::openProcess(string filename, bool first, bool debug)
 
 				if (!okToAttach)
 
-                {
+				{
 
 					RTDEBUG("->Match found (PID:0x" << pe32.th32ProcessID << "), but we are in 'Next' mode. Continuing search...");
-
-					
 
 					if (pe32.th32ProcessID == currentEQProcessID)
 
 						okToAttach = true;
 
 					//	currentEQProcessHandle = OpenProcess(PROCESS_VM_READ, false, currentEQProcessID);
-						
+
 					//	currentEQProcessBaseAddress = GetModuleBaseAddress( pe32.th32ProcessID, pe32.szExeFile);
 
-
 					continue;
-					
-
 				}
-
-					
 
 				// We found a matching process that we are allowed to open
 
 				RTDEBUG("->Match found (PID:0x" << pe32.th32ProcessID << "). Attempting to attach...");
 
-				if (OpenProcess(PROCESS_VM_READ|PROCESS_QUERY_INFORMATION, false, pe32.th32ProcessID))
+				if (OpenProcess(PROCESS_VM_READ | PROCESS_QUERY_INFORMATION, false, pe32.th32ProcessID))
 
 				{
 
 					// Access granted. Stop searching and set 'current' values.
 
 					RTDEBUG("-->Access granted.");
-					
+
 					currentEQProcessID = pe32.th32ProcessID;
 
-					currentEQProcessHandle = OpenProcess(PROCESS_VM_READ|PROCESS_QUERY_INFORMATION, false, currentEQProcessID);
+					currentEQProcessHandle = OpenProcess(PROCESS_VM_READ | PROCESS_QUERY_INFORMATION, false, currentEQProcessID);
 
-					currentEQProcessBaseAddress = GetModuleBaseAddress( pe32.th32ProcessID, pe32.szExeFile);
-					
+					currentEQProcessBaseAddress = GetModuleBaseAddress(pe32.th32ProcessID, pe32.szExeFile);
+
 					originalFilename = procExe;
 
 					rtn = true;
 
 					break;
-
 				}
 
 				else
@@ -302,16 +254,13 @@ bool MemReader::openProcess(string filename, bool first, bool debug)
 					currentEQProcessBaseAddress = 0x140000000;
 
 					currentEQProcessHandle = NULL;
-
 				}
-
 			}
 
-		} 
+		}
 
-		while (hProcessSnap && Process32Next(hProcessSnap, &pe32)); 
-
-	} 
+		while (hProcessSnap && Process32Next(hProcessSnap, &pe32));
+	}
 
 	if (hProcessSnap)
 		CloseHandle(hProcessSnap);
@@ -323,10 +272,6 @@ bool MemReader::openProcess(string filename, bool first, bool debug)
 
 	return rtn;
 }
-
-
-
-
 
 void MemReader::closeProcess()
 
@@ -341,10 +286,7 @@ void MemReader::closeProcess()
 	currentEQProcessID = 0;
 
 	currentEQProcessBaseAddress = 0x140000000;
-
 }
-
-
 
 bool MemReader::validateProcess(bool forceCheck)
 
@@ -352,50 +294,40 @@ bool MemReader::validateProcess(bool forceCheck)
 
 	bool stillValid = true; // only return false if we check and fail
 
-	
-
 	// Every 100 checks, make sure the process is still around
 	// This is now called only once for each receive.
 
 	readCount = (readCount + 1) % 100;
 
-	if ( forceCheck || (readCount == 2) )
+	if (forceCheck || (readCount == 2))
 
 	{
 
-		HANDLE         hProcessSnap = NULL; 
+		HANDLE hProcessSnap = NULL;
 
-		PROCESSENTRY32 pe32      = {0}; 
-
-		
+		PROCESSENTRY32 pe32 = {0};
 
 		stillValid = false;
 
-	
+		//  Fill in the size of the structure before using it.
 
-		//  Fill in the size of the structure before using it. 
+		pe32.dwSize = sizeof(PROCESSENTRY32);
 
-		pe32.dwSize = sizeof(PROCESSENTRY32); 
+		//  Take a snapshot of all processes in the system.
 
-	
-
-		//  Take a snapshot of all processes in the system. 
-
-		hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0); 
-
-	
+		hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 
 		// Walk thru each process looking for the process ID we had before
 
 		if (Process32First(hProcessSnap, &pe32))
 
-		{ 
+		{
 
-			do 
+			do
 
-			{ 
+			{
 
-				if ( currentEQProcessID != 0 && pe32.th32ProcessID == currentEQProcessID )
+				if (currentEQProcessID != 0 && pe32.th32ProcessID == currentEQProcessID)
 
 				{
 
@@ -403,41 +335,30 @@ bool MemReader::validateProcess(bool forceCheck)
 
 					TO_LOWER(procExe);
 
-					
-
-					if ( procExe == originalFilename )
+					if (procExe == originalFilename)
 
 					{
 
 						stillValid = true;
-
 					}
 
 					break;
-
 				}
 
 			}
 
-			while (Process32Next(hProcessSnap, &pe32)); 
-
-		} 
+			while (Process32Next(hProcessSnap, &pe32));
+		}
 
 		CloseHandle(hProcessSnap);
 
-		if ( !stillValid )
+		if (!stillValid)
 
 			closeProcess();
-
-	} 
-
-	
+	}
 
 	return stillValid;
-
 }
-
-
 
 QWORD MemReader::extractPointer(QWORD offset)
 
@@ -445,10 +366,9 @@ QWORD MemReader::extractPointer(QWORD offset)
 
 	QWORD rtn = 0;
 
-	ReadProcessMemory(currentEQProcessHandle, (void*) offset,(void*) &rtn, sizeof(rtn), NULL);
+	ReadProcessMemory(currentEQProcessHandle, (void*)offset, (void*)&rtn, sizeof(rtn), NULL);
 
 	return rtn;
-
 }
 
 QWORD MemReader::extractRAWPointer(QWORD offset)
@@ -457,15 +377,12 @@ QWORD MemReader::extractRAWPointer(QWORD offset)
 
 	QWORD rtn = 0;
 
-	ReadProcessMemory(currentEQProcessHandle, (void*) (offset - 0x140000000 + currentEQProcessBaseAddress),(void*) &rtn, sizeof(rtn), NULL);
+	ReadProcessMemory(currentEQProcessHandle, (void*)(offset - 0x140000000 + currentEQProcessBaseAddress), (void*)&rtn, sizeof(rtn), NULL);
 
-	//cout << "offset " << offset << " currenteq " << currentEQProcessBaseAddress << endl;
+	// cout << "offset " << offset << " currenteq " << currentEQProcessBaseAddress << endl;
 
 	return rtn;
-
 }
-
-
 
 string MemReader::extractString(QWORD offset)
 {
@@ -475,7 +392,7 @@ string MemReader::extractString(QWORD offset)
 
 	memset(buffer, 0, kNameBufLen);
 
-	ReadProcessMemory(currentEQProcessHandle, (void*) offset,(void*) buffer, kNameBufLen, NULL);
+	ReadProcessMemory(currentEQProcessHandle, (void*)offset, (void*)buffer, kNameBufLen, NULL);
 
 	buffer[kNameBufLen - 1] = 0;
 
@@ -493,56 +410,54 @@ string MemReader::extractString2(QWORD offset)
 
 	memset(buffer, 0, kNameBufLen);
 
-	ReadProcessMemory(currentEQProcessHandle, (void*) offset,(void*) buffer, kNameBufLen, NULL);
+	ReadProcessMemory(currentEQProcessHandle, (void*)offset, (void*)buffer, kNameBufLen, NULL);
 
 	if (isalnum(buffer[0]))
 		rtn = buffer;
 
 	return rtn;
-
 }
 
-
-bool MemReader::extractToBuffer(QWORD offset, char* buffer, UINT size) {
-	//better check if we can actually read this much memory... -eqmule 12/31 2014
-	//Basically if we ask ReadProcessMemory to read <size> bytes but the
-	//region we read from is smaller than <size> we end up in a scenario where we dont get ANY
-	//data read at all... tis fixes the bug where mobs wont show up on map for example...
-	//it also explains why client will work on one machine but not on another...
+bool MemReader::extractToBuffer(QWORD offset, char* buffer, UINT size)
+{
+	// better check if we can actually read this much memory... -eqmule 12/31 2014
+	// Basically if we ask ReadProcessMemory to read <size> bytes but the
+	// region we read from is smaller than <size> we end up in a scenario where we dont get ANY
+	// data read at all... tis fixes the bug where mobs wont show up on map for example...
+	// it also explains why client will work on one machine but not on another...
 	const int nSizeUpperBound = size;
 	BYTE* lpAddressToReadFrom = (BYTE*)offset;
 	MEMORY_BASIC_INFORMATION memInfo;
 	ZeroMemory(&memInfo, sizeof(MEMORY_BASIC_INFORMATION));
 
-	if(int vret = (int)VirtualQueryEx(currentEQProcessHandle, lpAddressToReadFrom, &memInfo,sizeof(MEMORY_BASIC_INFORMATION))) {
+	if (int vret = (int)VirtualQueryEx(currentEQProcessHandle, lpAddressToReadFrom, &memInfo, sizeof(MEMORY_BASIC_INFORMATION)))
+	{
 
-		int nBytesIntoRegion = (int)(lpAddressToReadFrom - (BYTE*)memInfo.BaseAddress);
-		int nBytesAwayFromEnd = (int)(memInfo.RegionSize - nBytesIntoRegion);
-		int ActualNumberOfBytesToRead = min(nSizeUpperBound,nBytesAwayFromEnd);
-		if(ActualNumberOfBytesToRead<(int)size)
+		int nBytesIntoRegion		  = (int)(lpAddressToReadFrom - (BYTE*)memInfo.BaseAddress);
+		int nBytesAwayFromEnd		  = (int)(memInfo.RegionSize - nBytesIntoRegion);
+		int ActualNumberOfBytesToRead = min(nSizeUpperBound, nBytesAwayFromEnd);
+		if (ActualNumberOfBytesToRead < (int)size)
 			size = ActualNumberOfBytesToRead;
 	}
 	bool rtn = false;
 
-	rtn = (ReadProcessMemory(currentEQProcessHandle, (void*) offset,(void*) buffer, size, NULL) != 0);
+	rtn		  = (ReadProcessMemory(currentEQProcessHandle, (void*)offset, (void*)buffer, size, NULL) != 0);
 	DWORD hmm = GetLastError();
-	if(rtn==false && hmm) {
-		char *szError = 0;
+	if (rtn == false && hmm)
+	{
+		char* szError = 0;
 		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |
-			FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+						  FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 			NULL,
 			hmm,
 			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-			(LPTSTR) &szError,
+			(LPTSTR)&szError,
 			0,
 			NULL);
 		Sleep(0);
 	}
 	return rtn;
-
 }
-
-
 
 float MemReader::extractFloat(QWORD offset)
 
@@ -550,10 +465,9 @@ float MemReader::extractFloat(QWORD offset)
 
 	float rtn;
 
-	ReadProcessMemory(currentEQProcessHandle, (void*) offset,(void*) &rtn, 4, NULL);
+	ReadProcessMemory(currentEQProcessHandle, (void*)offset, (void*)&rtn, 4, NULL);
 
 	return rtn;
-
 }
 
 BYTE MemReader::extractBYTE(QWORD offset)
@@ -562,10 +476,9 @@ BYTE MemReader::extractBYTE(QWORD offset)
 
 	BYTE rtn;
 
-	ReadProcessMemory(currentEQProcessHandle, (void*) offset,(void*) &rtn, 1, NULL);
+	ReadProcessMemory(currentEQProcessHandle, (void*)offset, (void*)&rtn, 1, NULL);
 
 	return rtn;
-
 }
 
 UINT MemReader::extractUINT(QWORD offset)
@@ -574,34 +487,32 @@ UINT MemReader::extractUINT(QWORD offset)
 
 	UINT rtn;
 
-	ReadProcessMemory(currentEQProcessHandle, (void*) offset,(void*) &rtn, 4, NULL);
+	ReadProcessMemory(currentEQProcessHandle, (void*)offset, (void*)&rtn, 4, NULL);
 
 	return rtn;
-
 }
 
 QWORD MemReader::GetModuleBaseAddress(DWORD iProcId, TCHAR* DLLName)
 {
-	HANDLE hSnap; // Process snapshot handle.
+	HANDLE hSnap;		   // Process snapshot handle.
 	MODULEENTRY32 xModule; // Module information structure.
 
 	if ((hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, iProcId)) == INVALID_HANDLE_VALUE) // Creates a module
 		return 0;
 
 	xModule.dwSize = sizeof(MODULEENTRY32); // Needed for Module32First/Next to work.
-	
+
 	BOOL bModule = Module32First(hSnap, &xModule);
-	while(bModule)
+	while (bModule)
 	{
 
-		if (lstrcmpi (xModule.szModule, DLLName) == 0) // If this is the module we want...
+		if (lstrcmpi(xModule.szModule, DLLName) == 0) // If this is the module we want...
 		{
-			CloseHandle(hSnap); // Free the handle.
+			CloseHandle(hSnap);				   // Free the handle.
 			return (QWORD)xModule.modBaseAddr; // return the base address.
 		}
 
 		bModule = Module32Next(hSnap, &xModule); // Loops through the rest of the modules.
-
 	}
 
 	CloseHandle(hSnap); // Free the handle.

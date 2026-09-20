@@ -22,8 +22,6 @@
 
 #include "Item.h"
 
- 
-
 Item::Item(void)
 
 {
@@ -33,10 +31,7 @@ Item::Item(void)
 	itemList.reserve(300);
 
 	largestOffset = 0;
-
 }
-
- 
 
 void Item::init(IniReaderInterface* ir_intf)
 
@@ -58,8 +53,6 @@ void Item::init(IniReaderInterface* ir_intf)
 
 	setOffset(OT_name, (UINT)ir_intf->readIntegerEntry("GroundItem Offsets", "NameOffset"), "Model Name");
 
- 
-
 	// Determine how many bytes we should read at item in memory
 
 	largestOffset = 0;
@@ -70,13 +63,10 @@ void Item::init(IniReaderInterface* ir_intf)
 
 		if (offsets[i] > largestOffset)
 
-			largestOffset = offsets[i]; 
-
+			largestOffset = offsets[i];
 	}
 
 	largestOffset += 30;
-
- 
 
 	// Allocate memory for our temporary buffer
 
@@ -84,13 +74,8 @@ void Item::init(IniReaderInterface* ir_intf)
 
 	rawBuffer = new char[largestOffset];
 
-
-
 	cout << "Item: GroundItem Offsets read in." << endl;
-
 }
-
- 
 
 void Item::setOffset(offset_types ot, int value, string name)
 
@@ -99,10 +84,7 @@ void Item::setOffset(offset_types ot, int value, string name)
 	offsets[ot] = value;
 
 	offsetNames[ot] = name;
-
 }
-
-
 
 void Item::packItemBuffer(UINT flags)
 
@@ -110,22 +92,15 @@ void Item::packItemBuffer(UINT flags)
 
 	tempItemBuffer.name = extractRawString(OT_name);
 
-	
+	tempItemBuffer.x = extractRawFloat(OT_x);
 
-	tempItemBuffer.x			= extractRawFloat(OT_x);
+	tempItemBuffer.y = extractRawFloat(OT_y);
 
-	tempItemBuffer.y			= extractRawFloat(OT_y);
+	tempItemBuffer.z = extractRawFloat(OT_z);
 
-	tempItemBuffer.z			= extractRawFloat(OT_z);
+	tempItemBuffer.id = extractRawDWord(OT_id);
 
-	
-
-	tempItemBuffer.id		= extractRawDWord(OT_id);
-
-	tempItemBuffer.dropid	= extractRawDWord(OT_dropid);
-
-	
+	tempItemBuffer.dropid = extractRawDWord(OT_dropid);
 
 	tempItemBuffer.flags = flags;
-
 }

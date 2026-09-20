@@ -17,12 +17,10 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
   ==============================================================================*/
- 
+
 #include "StdAfx.h"
 
 #include "World.h"
-
- 
 
 World::World(void)
 
@@ -33,10 +31,7 @@ World::World(void)
 	worldList.reserve(1);
 
 	largestOffset = 0;
-
 }
-
- 
 
 void World::init(IniReaderInterface* ir_intf)
 
@@ -55,8 +50,6 @@ void World::init(IniReaderInterface* ir_intf)
 
 	setOffset(OT_year, (UINT)ir_intf->readIntegerEntry("WorldInfo Offsets", "WorldYearOffset"), "Year");
 
- 
-
 	// Determine how many bytes we should read at item in memory
 
 	largestOffset = 0;
@@ -67,13 +60,10 @@ void World::init(IniReaderInterface* ir_intf)
 
 		if (offsets[i] > largestOffset)
 
-			largestOffset = offsets[i]; 
-
+			largestOffset = offsets[i];
 	}
 
 	largestOffset += 30;
-
- 
 
 	// Allocate memory for our temporary buffer
 
@@ -81,13 +71,8 @@ void World::init(IniReaderInterface* ir_intf)
 
 	rawBuffer = new char[largestOffset];
 
-
-
 	cout << "World: WorldInfo Offsets read in." << endl;
-
 }
-
- 
 
 void World::setOffset(offset_types ot, int value, string name)
 
@@ -96,10 +81,7 @@ void World::setOffset(offset_types ot, int value, string name)
 	offsets[ot] = value;
 
 	offsetNames[ot] = name;
-
 }
-
-
 
 void World::packWorldBuffer(UINT flags)
 
@@ -118,5 +100,4 @@ void World::packWorldBuffer(UINT flags)
 		tempWorldBuffer.year = extractRawDWord(OT_year);
 
 	tempWorldBuffer.flags = flags;
-
 }

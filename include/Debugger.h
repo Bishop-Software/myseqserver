@@ -20,8 +20,6 @@
 
 #pragma once
 
-
-
 #include "Common.h"
 
 #include "MemReader.h"
@@ -32,20 +30,23 @@
 
 #include "World.h"
 
-
-
 class Debugger
 
 {
 
 public:
-
-	enum offset_types { OT_zonename, OT_spawnlist, OT_self, OT_target, OT_ground, OT_world, OT_max };
-
-
+	enum offset_types
+	{
+		OT_zonename,
+		OT_spawnlist,
+		OT_self,
+		OT_target,
+		OT_ground,
+		OT_world,
+		OT_max
+	};
 
 private:
-
 	Spawn spawnParser;
 
 	Item itemParser;
@@ -55,8 +56,6 @@ private:
 	QWORD offsets[OT_max]{};
 
 	string ptrNames[OT_max];
-
-	
 
 	void init(IniReaderInterface* ir_intf);
 
@@ -100,17 +99,12 @@ private:
 
 	void scanForFloat(MemReaderInterface* mr_intf, string args, QWORD pStart, bool yankPstart);
 
-	int  tokenizeString(string input, vector<string>& tokens);
+	int tokenizeString(string input, vector<string>& tokens);
 
-	int  tokenizeDate(string input, vector<string>& tokens);
-
-	
+	int tokenizeDate(string input, vector<string>& tokens);
 
 public:
-
 	Debugger();
 
 	void enterDebugLoop(MemReaderInterface* mr_intf, IniReaderInterface* ir_intf);
-
 };
-
