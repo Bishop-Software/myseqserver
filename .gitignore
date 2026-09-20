@@ -1,3 +1,5 @@
 cmake-build-*/
 .idea/
 x64/
+*.aps
+*.vcxproj.user
