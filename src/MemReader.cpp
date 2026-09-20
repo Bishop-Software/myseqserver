@@ -34,6 +34,12 @@
 
 typedef uint64_t QWORD;
 
+// Buffer size used by extractString/extractString2 for reading short,
+// null-terminated names (spawn names, zone names, etc.) out of the target
+// process. Kept as a single constant so the declared buffer and the amount
+// actually read from the process can't drift apart.
+static const size_t kNameBufLen = 30;
+
 
 
 MemReader::MemReader() :
@@ -465,13 +471,13 @@ string MemReader::extractString(QWORD offset)
 {
 	string rtn("");
 
-	char buffer[50];
+	char buffer[kNameBufLen];
 
-	memset(buffer, 0, 50);
+	memset(buffer, 0, kNameBufLen);
 
-	ReadProcessMemory(currentEQProcessHandle, (void*) offset,(void*) buffer, 30, NULL);
+	ReadProcessMemory(currentEQProcessHandle, (void*) offset,(void*) buffer, kNameBufLen, NULL);
 
-	buffer[50 - 1] = 0;
+	buffer[kNameBufLen - 1] = 0;
 
 	return (string)buffer;
 }
@@ -483,11 +489,11 @@ string MemReader::extractString2(QWORD offset)
 	// Zones always should begin with an alpha numeric
 	string rtn("");
 
-	char buffer[50];
+	char buffer[kNameBufLen];
 
-	memset(buffer, 0, 50);
+	memset(buffer, 0, kNameBufLen);
 
-	ReadProcessMemory(currentEQProcessHandle, (void*) offset,(void*) buffer, 30, NULL);
+	ReadProcessMemory(currentEQProcessHandle, (void*) offset,(void*) buffer, kNameBufLen, NULL);
 
 	if (isalnum(buffer[0]))
 		rtn = buffer;
