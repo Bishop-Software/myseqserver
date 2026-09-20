@@ -35,10 +35,7 @@
 
 #include "Debugger.h"
 
-
-
 using namespace std;
-
 
 bool debug_mode;
 bool console_mode;
@@ -48,8 +45,8 @@ bool otherini;
 
 IniReader iniReader;
 
-char iniFile[_MAX_PATH+1];
-char configIniFile[_MAX_PATH+1];
+char iniFile[_MAX_PATH + 1];
+char configIniFile[_MAX_PATH + 1];
 
 int server_status;
 int check_delay;
@@ -68,4 +65,3 @@ void Minimize();
 void Restore();
 void InitNotifyIconData();
 void ToggleStartMinimized();
-

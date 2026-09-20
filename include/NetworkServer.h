@@ -18,10 +18,7 @@
 
   ==============================================================================*/
 
-
 #pragma once
-
-
 
 #include "Common.h"
 
@@ -42,7 +39,6 @@ class NetworkServerInterface
 {
 
 public:
-
 	virtual QWORD current_offset(int type) = 0;
 };
 
@@ -51,12 +47,18 @@ class NetworkServer : public NetworkServerInterface
 {
 
 public:
-
-	enum offset_types { OT_zonename, OT_spawnlist, OT_self, OT_target, OT_ground, OT_world, OT_max };
-
+	enum offset_types
+	{
+		OT_zonename,
+		OT_spawnlist,
+		OT_self,
+		OT_target,
+		OT_ground,
+		OT_world,
+		OT_max
+	};
 
 private:
-
 	UINT port;
 
 	SOCKET sockListener;
@@ -89,35 +91,30 @@ private:
 
 	World worldParser;
 
-
-
-public:	
-
+public:
 	// Bit flags (in clientRequest) determining what data the client is requesting. See client's Structures.cs.
 
 	enum inc_packet_types : int
 
 	{
 
-		IPT_zone =		0x01,
+		IPT_zone = 0x01,
 
-		IPT_self =		0x02,
+		IPT_self = 0x02,
 
-		IPT_target =	0x04,
+		IPT_target = 0x04,
 
-		IPT_spawns =	0x08,
+		IPT_spawns = 0x08,
 
-		IPT_ground =	0x10,
+		IPT_ground = 0x10,
 
-		IPT_getproc =	0x20,
+		IPT_getproc = 0x20,
 
-		IPT_setproc =	0x40,
+		IPT_setproc = 0x40,
 
-		IPT_world =		0x80
+		IPT_world = 0x80
 
 	};
-
-	
 
 	// The type of element we are sending back to client. Lives in the 'flags' field of the outgoing packets.
 
@@ -125,23 +122,21 @@ public:
 
 	{
 
-		OPT_spawns =	0x00,
+		OPT_spawns = 0x00,
 
-		OPT_target =	0x01,
+		OPT_target = 0x01,
 
-		OPT_zone =		0x04,
+		OPT_zone = 0x04,
 
-		OPT_ground =	0x05,
+		OPT_ground = 0x05,
 
-		OPT_process =	0x06,
+		OPT_process = 0x06,
 
-		OPT_world =		0x08,
+		OPT_world = 0x08,
 
-		OPT_self =		0xFD
+		OPT_self = 0xFD
 
 	};
-
-
 
 public:
 	HWND hwnd;
@@ -162,7 +157,7 @@ public:
 
 	void setOffset(offset_types ot, QWORD value);
 
-	void init(IniReaderInterface* ir_intf);	
+	void init(IniReaderInterface* ir_intf);
 
 	void enterReceiveLoop(MemReaderInterface* mr_intf);
 
@@ -173,6 +168,4 @@ public:
 	string getCharName(MemReaderInterface* mr_intf);
 
 	QWORD current_offset(int type);
-
 };
-

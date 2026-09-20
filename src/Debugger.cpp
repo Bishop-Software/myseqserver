@@ -23,15 +23,15 @@
 #include <cstdlib>
 #include <string>
 
-#define TO_LOWER(str) (transform(str.begin(), str.end(), str.begin(), (int(*)(int))tolower))
+#define TO_LOWER(str) (transform(str.begin(), str.end(), str.begin(), (int (*)(int))tolower))
 
 #define DISPLAY_SPAWN_ITEM(off, member) cout << "    " << spawnParser.ptrNames[spawnParser.off] << " -> " << spawnParser.tempNetBuffer.member << endl
 
 #define DISPLAY_SPAWN_ITEMI(off, member) cout << "    " << spawnParser.ptrNames[spawnParser.off] << " -> " << spawnParser.tempNetBuffer.member << endl
 
-
-Debugger::Debugger(){}
-
+Debugger::Debugger()
+{
+}
 
 bool Debugger::setOffset(offset_types ot, QWORD value)
 {
@@ -43,14 +43,12 @@ bool Debugger::setOffset(offset_types ot, QWORD value)
 	return true;
 }
 
-
 void Debugger::setOffset(offset_types ot, QWORD value, string ptrName)
 {
 	setOffset(ot, value);
 
 	ptrNames[ot] = ptrName;
 }
-
 
 void Debugger::init(IniReaderInterface* ir_intf)
 {
@@ -60,61 +58,56 @@ void Debugger::init(IniReaderInterface* ir_intf)
 
 	worldParser.init(ir_intf);
 
-	
-	setOffset(OT_spawnlist,	ir_intf->readIntegerEntry("Memory Offsets", "SpawnHeaderAddr"), "pSpawns");
+	setOffset(OT_spawnlist, ir_intf->readIntegerEntry("Memory Offsets", "SpawnHeaderAddr"), "pSpawns");
 
-	setOffset(OT_self,		ir_intf->readIntegerEntry("Memory Offsets", "CharInfo"), "pSelf");
+	setOffset(OT_self, ir_intf->readIntegerEntry("Memory Offsets", "CharInfo"), "pSelf");
 
-	setOffset(OT_target,	ir_intf->readIntegerEntry("Memory Offsets", "TargetAddr"), "pTarget");
+	setOffset(OT_target, ir_intf->readIntegerEntry("Memory Offsets", "TargetAddr"), "pTarget");
 
-	setOffset(OT_zonename,	ir_intf->readIntegerEntry("Memory Offsets", "ZoneAddr"), "pZone");
+	setOffset(OT_zonename, ir_intf->readIntegerEntry("Memory Offsets", "ZoneAddr"), "pZone");
 
-	setOffset(OT_ground,	ir_intf->readIntegerEntry("Memory Offsets", "ItemsAddr"), "pItems");
+	setOffset(OT_ground, ir_intf->readIntegerEntry("Memory Offsets", "ItemsAddr"), "pItems");
 
-	setOffset(OT_world,		ir_intf->readIntegerEntry("Memory Offsets", "WorldAddr"), "pWorld");
+	setOffset(OT_world, ir_intf->readIntegerEntry("Memory Offsets", "WorldAddr"), "pWorld");
 
-	
 	cout << "Debugger: Memory offsets read in." << endl;
 }
-
 
 void Debugger::printMenu()
 {
 	cout << endl;
 	cout << "   (d)isplay / (r)eload offsets" << endl;
-//	cout << "    r) reload all offsets from INI file" << endl;
+	//	cout << "    r) reload all offsets from INI file" << endl;
 	cout << "  spo) set a primary offset   (index/name) (hex value)" << endl;
 	cout << "  sso) set a secondary offset (index/name) (hex value)" << endl;
 	cout << "   ez) examine data using pZone (et) pTarget (ew) pWorld" << endl;
 	cout << "   es) examine raw data using pSelf" << endl;
-//	cout << "   et) examine raw data using pTarget" << endl;
-//	cout << "   ew) examine raw data using pWorld" << endl;
+	//	cout << "   et) examine raw data using pTarget" << endl;
+	//	cout << "   ew) examine raw data using pWorld" << endl;
 	cout << "   fz) find zonename using pZone (zonename)" << endl;
 	cout << "   ft) find spawnname using pTarget (fs) pSelf (spawnname)" << endl;
-//	cout << "   fs) find spawnname using pSelf (spawnname)" << endl;
+	//	cout << "   fs) find spawnname using pSelf (spawnname)" << endl;
 	cout << "   ps) display spawn info using pSelf (pt) pTarget" << endl;
-//	cout << "   pt) display spawn info using pTarget" << endl;
+	//	cout << "   pt) display spawn info using pTarget" << endl;
 	cout << "   sp) scan process names (process name)" << endl;
 	cout << "  sft) scan for float using pTarget (sfs) pSelf (X,Y,Z)" << endl;
-//	cout << "  sfs) scan for floating point using pSelf (X,Y,Z)" << endl;
+	//	cout << "  sfs) scan for floating point using pSelf (X,Y,Z)" << endl;
 	cout << "  sfa) scan for floating point using Address (X,Y,Z,Address)" << endl;
 	cout << "  sfu) scan for UINT using pSelf (int)" << endl;
 	cout << "  sbt) scan for BYTE using pTarget (sbs) pSelf (byte)" << endl;
 	cout << "  sfw) scan for world using Game Date (mm/dd/yyyy) from /time" << endl;
 	cout << "   sg) scan for ground items" << endl;
 	cout << "   ws) walk the spawnlist (reverse) using pSelf (wt) pTarget" << endl;
-//	cout << "   wt) walk the spawnlist (reverse) using pTarget" << endl;
+	//	cout << "   wt) walk the spawnlist (reverse) using pTarget" << endl;
 	cout << "   vs) walk the spawnlist (forward) using pSelf (vt) pTarget" << endl;
-//	cout << "   vt) walk the spawnlist (forward) using pTarget" << endl;
+	//	cout << "   vt) walk the spawnlist (forward) using pTarget" << endl;
 	cout << "    x) exit debugger" << endl;
 	cout << endl;
 }
 
-
 void Debugger::enterDebugLoop(MemReaderInterface* mr_intf, IniReaderInterface* ir_intf)
 {
 	string userInput;
-	
 
 	init(ir_intf);
 
@@ -124,7 +117,7 @@ void Debugger::enterDebugLoop(MemReaderInterface* mr_intf, IniReaderInterface* i
 	{
 		cout << " > ";
 
-		getline( cin, userInput);
+		getline(cin, userInput);
 
 		if (userInput.compare(0, 1, "?") == 0)
 			printMenu();
@@ -169,7 +162,7 @@ void Debugger::enterDebugLoop(MemReaderInterface* mr_intf, IniReaderInterface* i
 		else if (userInput.compare(0, 3, "sbs") == 0)
 			scanForBYTEFromSelf(mr_intf, 0x1000, userInput.erase(0, 3));
 		else if (userInput.compare(0, 3, "sfw") == 0)
-			scanForWorldFromDate(mr_intf, OT_world, 0x1000000, userInput.erase(0,4));
+			scanForWorldFromDate(mr_intf, OT_world, 0x1000000, userInput.erase(0, 4));
 		else if (userInput.compare(0, 2, "sg") == 0)
 			scanForString(mr_intf, OT_ground, 0x1000000, "IT");
 		else if (userInput.compare(0, 2, "ws") == 0)
@@ -181,7 +174,7 @@ void Debugger::enterDebugLoop(MemReaderInterface* mr_intf, IniReaderInterface* i
 		else if (userInput.compare(0, 2, "vt") == 0)
 			walkSpawnList(mr_intf, OT_target, false);
 		else if (userInput.compare(0, 1, "x") == 0)
-			break;	
+			break;
 		else
 			cout << " Invalid selection. Please try again." << endl;
 
@@ -189,67 +182,52 @@ void Debugger::enterDebugLoop(MemReaderInterface* mr_intf, IniReaderInterface* i
 	}
 }
 
-
-
 void Debugger::displayCurrentOffsets()
 {
 	int i;
 
-	
 	cout << endl;
 	cout << "     Primary Offsets" << endl;
 	cout << "=========================" << endl;
 
-	for (i=0; i<OT_max; i++)
+	for (i = 0; i < OT_max; i++)
 	{
 		cout.width(10);
 		cout << setfill(' ') << right << i << ") " << ptrNames[i] << " = 0x" << hex << offsets[i] << endl;
 	}
 
-	
 	cout << endl;
 	cout << "    Secondary Spawn Offsets" << endl;
 	cout << "===============================" << endl;
 
-	for (i=0; i<spawnParser.OT_max ; i++)
+	for (i = 0; i < spawnParser.OT_max; i++)
 	{
 		cout.width(10);
-		cout << setfill(' ') << right << i << ") " << spawnParser.ptrNames[i] << " = 0x" <<
-			setw(3) << hex << setfill('0') << spawnParser.offsets[i] <<
-			dec << " (" << spawnParser.offsets[i] << ")" << endl;
+		cout << setfill(' ') << right << i << ") " << spawnParser.ptrNames[i] << " = 0x" << setw(3) << hex << setfill('0') << spawnParser.offsets[i] << dec << " (" << spawnParser.offsets[i] << ")" << endl;
 	}
-
 
 	cout << endl;
 	cout << "    Secondary Ground Offsets" << endl;
 	cout << "===============================" << endl;
 
-	for (i=0; i<itemParser.OT_max ; i++)
+	for (i = 0; i < itemParser.OT_max; i++)
 	{
 		cout.width(10);
-		cout << setfill(' ') << right << i << ") " << itemParser.offsetNames[i] << " = 0x" <<
-			setw(3) << hex << setfill('0') << itemParser.offsets[i] <<
-			dec << " (" << itemParser.offsets[i] << ")" << endl;
+		cout << setfill(' ') << right << i << ") " << itemParser.offsetNames[i] << " = 0x" << setw(3) << hex << setfill('0') << itemParser.offsets[i] << dec << " (" << itemParser.offsets[i] << ")" << endl;
 	}
-
 
 	cout << endl;
 	cout << "    Secondary World Offsets" << endl;
 	cout << "===============================" << endl;
 
-	for (i=0; i<worldParser.OT_max ; i++)
+	for (i = 0; i < worldParser.OT_max; i++)
 	{
 		cout.width(10);
-		cout << setfill(' ') << right << i << ") " << worldParser.offsetNames[i] << " = 0x" <<
-			setw(3) << hex << setfill('0') << worldParser.offsets[i] <<
-			dec << " (" << worldParser.offsets[i] << ")" << endl;
+		cout << setfill(' ') << right << i << ") " << worldParser.offsetNames[i] << " = 0x" << setw(3) << hex << setfill('0') << worldParser.offsets[i] << dec << " (" << worldParser.offsets[i] << ")" << endl;
 	}
 
-	
 	cout << endl;
 }
-
-
 
 void Debugger::setOffset(bool primary, string args)
 {
@@ -261,7 +239,6 @@ void Debugger::setOffset(bool primary, string args)
 
 	bool useIndex = true;
 
-	
 	// Primary offsets are in this Debugger class, but Secondary offsets live in the Spawn class.
 	if (primary)
 		OT_max = this->OT_max;
@@ -289,13 +266,11 @@ void Debugger::setOffset(bool primary, string args)
 
 		string parm1Str(parm1String);
 
-		
 		TO_LOWER(parm1Str);
 
 		parm1Int = OT_max;
 
-		
-		for (i=0; i<OT_max; i++)
+		for (i = 0; i < OT_max; i++)
 		{
 			if (primary)
 				ptrName = ptrNames[i];
@@ -310,11 +285,12 @@ void Debugger::setOffset(bool primary, string args)
 				break;
 			}
 		}
-	}			
+	}
 
 	if (primary)
 	{
-		if (setOffset((offset_types)parm1Int, parm2Int)) {
+		if (setOffset((offset_types)parm1Int, parm2Int))
+		{
 			if (parm1Int < OT_max)
 				cout << " Primary offset #" << parm1Int << " (" << ptrNames[parm1Int] << ") was set to 0x" << hex << parm2Int << endl;
 		}
@@ -336,19 +312,16 @@ void Debugger::setOffset(bool primary, string args)
 	}
 }
 
-
-
 void Debugger::examineRawMemory(MemReaderInterface* mr_intf, offset_types ot)
 {
-	const UINT bufSize=6144;
+	const UINT bufSize = 6144;
 
 	char buffer[bufSize], temp[65];
 	QWORD pMem;
 	UINT index;
 
-	int r,c;
+	int r, c;
 
-	
 	memset(buffer, 0, bufSize);
 
 	// pZone is a direct pointer. All others are indirect.
@@ -357,7 +330,7 @@ void Debugger::examineRawMemory(MemReaderInterface* mr_intf, offset_types ot)
 	else
 		pMem = mr_intf->extractRAWPointer(offsets[ot]);
 
-	cout << " Display Raw Memory from 0x" << (pMem + 0x140000000 - mr_intf->getCurrentBaseAddress()) << " to 0x" << (pMem + bufSize  + 0x140000000 - mr_intf->getCurrentBaseAddress()) << endl;
+	cout << " Display Raw Memory from 0x" << (pMem + 0x140000000 - mr_intf->getCurrentBaseAddress()) << " to 0x" << (pMem + bufSize + 0x140000000 - mr_intf->getCurrentBaseAddress()) << endl;
 
 	// Read the raw memory into our local buffer
 	if (pMem)
@@ -377,14 +350,14 @@ void Debugger::examineRawMemory(MemReaderInterface* mr_intf, offset_types ot)
 	}
 
 	// Display the data
-	for (r=0; r<bufSize/16; r++)
+	for (r = 0; r < bufSize / 16; r++)
 	{
-		cout << "0x" << hex << setfill('0') << setw(2) << r*16 << ") ";
+		cout << "0x" << hex << setfill('0') << setw(2) << r * 16 << ") ";
 
 		// Display data in byte format
-		for (c=0; c<16; c++)
+		for (c = 0; c < 16; c++)
 		{
-			index = r*16 + c;
+			index = r * 16 + c;
 
 			_itoa_s((buffer[index] & 0xFF), temp, 65, 16);
 
@@ -397,9 +370,9 @@ void Debugger::examineRawMemory(MemReaderInterface* mr_intf, offset_types ot)
 		// Display data in string format
 		cout << "  ";
 
-		for (c=0; c<16; c++)
+		for (c = 0; c < 16; c++)
 		{
-			index = r*16 + c;
+			index = r * 16 + c;
 
 			if (isalnum(buffer[index] & 0xFF))
 				cout << buffer[index];
@@ -411,13 +384,10 @@ void Debugger::examineRawMemory(MemReaderInterface* mr_intf, offset_types ot)
 	}
 }
 
-
-
 void Debugger::processSpawn(MemReaderInterface* mr_intf, offset_types ot)
 {
 	QWORD pMem;
 
-	
 	// pZone is a direct pointer. All others are indirect.
 	if (ot == OT_zonename)
 		pMem = offsets[ot] - 0x140000000 + mr_intf->getCurrentBaseAddress();
@@ -484,13 +454,10 @@ void Debugger::processSpawn(MemReaderInterface* mr_intf, offset_types ot)
 	DISPLAY_SPAWN_ITEM(OT_offhand, offhand);
 }
 
-
-
 void Debugger::walkSpawnList(MemReaderInterface* mr_intf, offset_types ot, bool reverse)
 {
 	QWORD pMem, pPrev, pNext, spawnCount;
 
-	
 	pMem = mr_intf->extractRAWPointer(offsets[ot]);
 
 	// First try and get to the initial spawn entity
@@ -539,7 +506,7 @@ void Debugger::walkSpawnList(MemReaderInterface* mr_intf, offset_types ot, bool 
 		cout << "    " << spawnParser.ptrNames[spawnParser.OT_next] << " -> 0x" << hex << pNext << endl;
 
 		// Walk up the list until we reach the beginning
-		if (( reverse && pPrev) || (!reverse && pNext))
+		if ((reverse && pPrev) || (!reverse && pNext))
 		{
 			if (reverse)
 				pMem = pPrev;
@@ -556,7 +523,7 @@ void Debugger::walkSpawnList(MemReaderInterface* mr_intf, offset_types ot, bool 
 		}
 	}
 
-	while ( ((!reverse && pNext) || ( reverse && pPrev)) && (spawnCount < 1000));
+	while (((!reverse && pNext) || (reverse && pPrev)) && (spawnCount < 1000));
 
 	cout << " Discovered " << dec << spawnCount << " spawn entities during the walk." << endl;
 
@@ -565,26 +532,21 @@ void Debugger::walkSpawnList(MemReaderInterface* mr_intf, offset_types ot, bool 
 			scanForPtr(mr_intf, pMem, 0x140000000, 0x1800000);
 }
 
-
-
 void Debugger::scanForPtr(MemReaderInterface* mr_intf, QWORD pSearch, QWORD pStart, QWORD size)
 {
 	QWORD pMem, pExtracted;
 
-	
 	if (!pStart)
 		return;
 
-		
-	cout << " Scanning for 0x" << hex << pSearch << " from 0x" << (pStart) << " to 0x" << (pStart+size) << endl;
+	cout << " Scanning for 0x" << hex << pSearch << " from 0x" << (pStart) << " to 0x" << (pStart + size) << endl;
 
-	
-	for (pMem=pStart; pMem<(pStart+size); pMem+=1)
+	for (pMem = pStart; pMem < (pStart + size); pMem += 1)
 	{
-		if (!(mr_intf->extractToBuffer(pMem, (char*) &pExtracted, sizeof(pExtracted))))
+		if (!(mr_intf->extractToBuffer(pMem, (char*)&pExtracted, sizeof(pExtracted))))
 		{
-			//cout << " Failed to read memory at address 0x" << hex << pMem << endl;
-			//return;
+			// cout << " Failed to read memory at address 0x" << hex << pMem << endl;
+			// return;
 
 			continue;
 		}
@@ -596,8 +558,6 @@ void Debugger::scanForPtr(MemReaderInterface* mr_intf, QWORD pSearch, QWORD pSta
 	}
 }
 
-
-
 void Debugger::scanForString(MemReaderInterface* mr_intf, offset_types ot, QWORD size, string searchStr)
 {
 	QWORD pMem, pStart, pDeepMem, pDeepMem2, nameOffset;
@@ -606,32 +566,30 @@ void Debugger::scanForString(MemReaderInterface* mr_intf, offset_types ot, QWORD
 
 	string spawnName, itemName;
 
-
-	if ( (offsets[ot] == 0) || (size == 0) || searchStr.length() == 0)
+	if ((offsets[ot] == 0) || (size == 0) || searchStr.length() == 0)
 	{
 		cout << " Error: '" << searchStr << "' appears to be an invalid search string." << endl;
 		return;
 	}
 
-	pStart = offsets[ot] - 4*size - 0x140000000 + mr_intf->getCurrentBaseAddress();
+	pStart = offsets[ot] - 4 * size - 0x140000000 + mr_intf->getCurrentBaseAddress();
 
 	if (ot == OT_ground)
 		nameOffset = itemParser.offsets[itemParser.OT_name];
 	else
 		nameOffset = spawnParser.offsets[spawnParser.OT_name];
 
-	cout << " Scanning for '" << searchStr << "' from 0x" << hex << pStart << " to 0x" << (pStart+8*size) << endl;
+	cout << " Scanning for '" << searchStr << "' from 0x" << hex << pStart << " to 0x" << (pStart + 8 * size) << endl;
 
-
-	for (pMem=pStart; pMem<(pStart+size*8);)
+	for (pMem = pStart; pMem < (pStart + size * 8);)
 	{
 		// The zonename search is a little different
 		if (ot == OT_zonename)
 		{
 			if (!(mr_intf->extractToBuffer(pMem, buffer, 1)))
 			{
-				//cout << " Failed to read memory at address 0x" << hex << pMem << endl;
-				//return;
+				// cout << " Failed to read memory at address 0x" << hex << pMem << endl;
+				// return;
 
 				pMem += 1;
 				continue;
@@ -655,8 +613,8 @@ void Debugger::scanForString(MemReaderInterface* mr_intf, offset_types ot, QWORD
 			// When seaching for spawn names, we have an additional pointer to go thru first.
 			if (!(pDeepMem = mr_intf->extractPointer(pMem)))
 			{
-				//cout << " Failed to read memory at address 0x" << hex << pMem << endl;
-				//return;
+				// cout << " Failed to read memory at address 0x" << hex << pMem << endl;
+				// return;
 
 				pMem += 8;
 				continue;
@@ -680,8 +638,8 @@ void Debugger::scanForString(MemReaderInterface* mr_intf, offset_types ot, QWORD
 			// When seaching for ground items, we have an additional pointer to go thru first.
 			if (!(pDeepMem2 = mr_intf->extractPointer(pMem)))
 			{
-				//cout << " Failed to read memory at address 0x" << hex << pMem << endl;
-				//return;
+				// cout << " Failed to read memory at address 0x" << hex << pMem << endl;
+				// return;
 
 				pMem += 8;
 				continue;
@@ -691,7 +649,7 @@ void Debugger::scanForString(MemReaderInterface* mr_intf, offset_types ot, QWORD
 			{
 				itemName = mr_intf->extractString(pDeepMem2 + nameOffset);
 
-				if ( itemName.compare(0,2,searchStr) == 0)
+				if (itemName.compare(0, 2, searchStr) == 0)
 				{
 					cout << " Pointer match found at 0x" << (pMem + 0x140000000 - mr_intf->getCurrentBaseAddress()) << ". Full string is " << itemName << endl;
 				}
@@ -699,8 +657,8 @@ void Debugger::scanForString(MemReaderInterface* mr_intf, offset_types ot, QWORD
 
 			if (!(pDeepMem = mr_intf->extractPointer(pDeepMem2)))
 			{
-				//cout << " Failed to read memory at address 0x" << hex << pMem << endl;
-				//return;
+				// cout << " Failed to read memory at address 0x" << hex << pMem << endl;
+				// return;
 
 				pMem += 8;
 				continue;
@@ -710,7 +668,7 @@ void Debugger::scanForString(MemReaderInterface* mr_intf, offset_types ot, QWORD
 			{
 				itemName = mr_intf->extractString(pDeepMem + nameOffset);
 
-				if ( itemName.compare(0,2,searchStr) == 0)
+				if (itemName.compare(0, 2, searchStr) == 0)
 				{
 					cout << " Pointer match found at 0x" << (pMem + 0x140000000 - mr_intf->getCurrentBaseAddress()) << ". Full string is " << itemName << endl;
 				}
@@ -718,29 +676,26 @@ void Debugger::scanForString(MemReaderInterface* mr_intf, offset_types ot, QWORD
 
 			pMem += 8;
 		}
-	}	
+	}
 }
-
-
 
 void Debugger::showProcesses(MemReaderInterface* mr_intf, string processName)
 {
-	if ( processName == "" )
+	if (processName == "")
 		processName = "eqgame";
 
 	// Show all possible matching process information
 	mr_intf->openFirstProcess(processName, true);
 
-	while (mr_intf->openNextProcess(processName, true)){};
+	while (mr_intf->openNextProcess(processName, true))
+	{
+	};
 }
-
-
 
 void Debugger::scanForFloatFromTarget(MemReaderInterface* mr_intf, string args)
 {
 	QWORD pStart;
 
-	
 	pStart = mr_intf->extractRAWPointer(offsets[OT_target]);
 
 	scanForFloat(mr_intf, args, pStart, false);
@@ -749,7 +704,6 @@ void Debugger::scanForFloatFromTarget(MemReaderInterface* mr_intf, string args)
 void Debugger::scanForFloatFromSelf(MemReaderInterface* mr_intf, string args)
 {
 	QWORD pStart;
-
 
 	pStart = mr_intf->extractRAWPointer(offsets[OT_self]);
 
@@ -760,7 +714,6 @@ void Debugger::scanForUINTFromSelf(MemReaderInterface* mr_intf, QWORD size, stri
 {
 	QWORD pStart;
 
-
 	pStart = mr_intf->extractRAWPointer(offsets[OT_self]);
 
 	scanForUINT(mr_intf, pStart, size, 4, args);
@@ -769,7 +722,6 @@ void Debugger::scanForUINTFromSelf(MemReaderInterface* mr_intf, QWORD size, stri
 void Debugger::scanForBYTEFromTarget(MemReaderInterface* mr_intf, QWORD size, string args)
 {
 	QWORD pStart;
-
 
 	pStart = mr_intf->extractRAWPointer(offsets[OT_target]);
 
@@ -780,7 +732,6 @@ void Debugger::scanForBYTEFromSelf(MemReaderInterface* mr_intf, QWORD size, stri
 {
 	QWORD pStart;
 
-
 	pStart = mr_intf->extractRAWPointer(offsets[OT_self]);
 
 	scanForUINT(mr_intf, pStart, size, 2, args);
@@ -790,13 +741,10 @@ void Debugger::scanForFloatFromAddress(MemReaderInterface* mr_intf, string args)
 {
 	vector<string> tokens;
 
-
 	tokenizeString(args, tokens);
 
 	scanForFloat(mr_intf, args, (QWORD)strtoull(tokens[3].c_str(), NULL, 16), false);
 }
-
-
 
 void Debugger::scanForFloat(MemReaderInterface* mr_intf, string args, QWORD pStart, bool yankPstart)
 {
@@ -814,50 +762,46 @@ void Debugger::scanForFloat(MemReaderInterface* mr_intf, string args, QWORD pSta
 
 	bool sCheck, dCheck, tCheck;
 
-	
-
 	// First get our x/y/z values if given
 
 	xFind = yFind = zFind = INVALID;
 
 	sCheck = dCheck = tCheck = false;
 
-	
-
-	switch ( tokenizeString(args, tokens) )
+	switch (tokenizeString(args, tokens))
 	{
 		case 4:
-			if (yankPstart) {
+			if (yankPstart)
+			{
 
 				pStart = strtol(tokens[3].c_str(), NULL, 16);
 				pStart = pStart - 0x140000000 + mr_intf->getCurrentBaseAddress();
-				
 			}
-			xFind = (float) atof(tokens[0].c_str());
+			xFind = (float)atof(tokens[0].c_str());
 
-			yFind = (float) atof(tokens[1].c_str());
+			yFind = (float)atof(tokens[1].c_str());
 
-			zFind = (float) atof(tokens[2].c_str());
+			zFind = (float)atof(tokens[2].c_str());
 
 			tCheck = true;
 
 			break;
 
 		case 3:
-			xFind = (float) atof(tokens[0].c_str());
+			xFind = (float)atof(tokens[0].c_str());
 
-			yFind = (float) atof(tokens[1].c_str());
+			yFind = (float)atof(tokens[1].c_str());
 
 			if (yankPstart)
 			{
 				pStart = atoi(tokens[2].c_str());
 				pStart = pStart - 0x140000000 + mr_intf->getCurrentBaseAddress();
-				
+
 				dCheck = true;
 			}
 			else
 			{
-				zFind = (float) atof(tokens[2].c_str());
+				zFind = (float)atof(tokens[2].c_str());
 
 				tCheck = true;
 			}
@@ -865,18 +809,18 @@ void Debugger::scanForFloat(MemReaderInterface* mr_intf, string args, QWORD pSta
 			break;
 
 		case 2:
-			xFind = (float) atof(tokens[0].c_str());
+			xFind = (float)atof(tokens[0].c_str());
 
 			if (yankPstart)
 			{
 				pStart = atoi(tokens[1].c_str());
 				pStart = pStart - 0x140000000 + mr_intf->getCurrentBaseAddress();
-				
+
 				sCheck = true;
 			}
 			else
 			{
-				yFind = (float) atof(tokens[1].c_str());
+				yFind = (float)atof(tokens[1].c_str());
 
 				dCheck = true;
 			}
@@ -884,7 +828,7 @@ void Debugger::scanForFloat(MemReaderInterface* mr_intf, string args, QWORD pSta
 			break;
 
 		case 1:
-			xFind = (float) atof(tokens[0].c_str());
+			xFind = (float)atof(tokens[0].c_str());
 
 			sCheck = true;
 
@@ -904,13 +848,12 @@ void Debugger::scanForFloat(MemReaderInterface* mr_intf, string args, QWORD pSta
 		pEnd = pStart + 0x1000;
 
 	// First try and get to the initial spawn entity
-	for ( pFloat = pStart; pFloat < pEnd; pFloat += 4 )
+	for (pFloat = pStart; pFloat < pEnd; pFloat += 4)
 	{
 		xMatch = yMatch = zMatch = false;
 
 		xTemp = yTemp = zTemp = INVALID;
 
-		
 		if (sCheck || dCheck || tCheck)
 		{
 			xTemp = mr_intf->extractFloat(pFloat);
@@ -956,13 +899,11 @@ void Debugger::scanForFloat(MemReaderInterface* mr_intf, string args, QWORD pSta
 					to_string(round(yTemp * 100.0) / 100.0).substr(0, tokens[1].length()) == to_string(yFind).substr(0, tokens[1].length()) &&
 					to_string(round(zTemp * 100.0) / 100.0).substr(0, tokens[2].length()) == to_string(zFind).substr(0, tokens[2].length()))
 					cout << hex << "  X,Y,Z match found at offset 0x" << (pFloat - pStart) << ", 0x" << (pFloat - pStart) + 4
-					<< ", 0x" << (pFloat - pStart) + 8 << dec << " (" << xTemp << "," << yTemp << "," << zTemp << ")" << endl;
+						 << ", 0x" << (pFloat - pStart) + 8 << dec << " (" << xTemp << "," << yTemp << "," << zTemp << ")" << endl;
 			}
 		}
 	}
 }
-
-
 
 void Debugger::scanForWorldFromDate(MemReaderInterface* mr_intf, offset_types ot, QWORD size, string args)
 {
@@ -980,14 +921,12 @@ void Debugger::scanForWorldFromDate(MemReaderInterface* mr_intf, offset_types ot
 
 	vector<string> tokens;
 
-	
-
-	if ( (offsets[ot] == 0) || (size == 0) || args.length() == 0)
+	if ((offsets[ot] == 0) || (size == 0) || args.length() == 0)
 	{
 		cout << "    Error: '" << args << "' appears to be an invalid date." << endl;
 		cout << "    Proper usage - sfw mm/dd/yyyy" << endl;
 		cout << "    Get date from Game Time using /time" << endl;
- 
+
 		return;
 	}
 
@@ -1000,7 +939,7 @@ void Debugger::scanForWorldFromDate(MemReaderInterface* mr_intf, offset_types ot
 	// First get our month/day/year values if given
 	mFind = dFind = yFind = 0;
 
-	if ( tokenizeDate(args, tokens) != 3)
+	if (tokenizeDate(args, tokens) != 3)
 	{
 		cout << "    Incomplete Date.  Proper usage - sfw mm/dd/yyyy" << endl;
 		cout << "    Get date from Game Time using /time" << endl;
@@ -1008,35 +947,35 @@ void Debugger::scanForWorldFromDate(MemReaderInterface* mr_intf, offset_types ot
 		return;
 	}
 
-	mFind = (BYTE) atol(tokens[0].c_str());
+	mFind = (BYTE)atol(tokens[0].c_str());
 
-	dFind = (BYTE) atol(tokens[1].c_str());
+	dFind = (BYTE)atol(tokens[1].c_str());
 
-	yFind = (UINT) atol(tokens[2].c_str());
+	yFind = (UINT)atol(tokens[2].c_str());
 
-	if (((int) mFind > 12) || ((int)dFind > 31))
+	if (((int)mFind > 12) || ((int)dFind > 31))
 	{
 		cout << "    Bad Date (mm/dd/yyyy): Limit mm to max of 12 and dd to max of 31" << endl;
 
 		return;
 	}
 
-	pStart = offsets[ot] - 2*size;
+	pStart = offsets[ot] - 2 * size;
 
 	if (pStart == 0)
 		return;
 
 	pStart = pStart - 0x140000000 + mr_intf->getCurrentBaseAddress();
 
-	cout << " Scanning for '" << args << "' from 0x" << hex << pStart << " to 0x" << (pStart+4*size) << endl;
+	cout << " Scanning for '" << args << "' from 0x" << hex << pStart << " to 0x" << (pStart + 4 * size) << endl;
 
-	for (pMem=pStart; pMem<(pStart+size*4);)
+	for (pMem = pStart; pMem < (pStart + size * 4);)
 	{
 		// We have an additional pointer to go thru first.
 		if (!(pDeepMem = mr_intf->extractPointer(pMem)))
 		{
-			//cout << " Failed to read memory at address 0x" << hex << pMem << endl;
-			//return;
+			// cout << " Failed to read memory at address 0x" << hex << pMem << endl;
+			// return;
 
 			pMem += 4;
 			continue;
@@ -1052,8 +991,7 @@ void Debugger::scanForWorldFromDate(MemReaderInterface* mr_intf, offset_types ot
 
 			if (dTemp == dFind && mTemp == mFind && yTemp == yFind)
 			{
-				cout << hex << "  Date match found at offset 0x" << (pMem + 0x140000000 - mr_intf->getCurrentBaseAddress()) <<
-				dec << " (" << (int) mTemp << "/" << (int) dTemp << "/" << (int) yTemp << ")" << endl;
+				cout << hex << "  Date match found at offset 0x" << (pMem + 0x140000000 - mr_intf->getCurrentBaseAddress()) << dec << " (" << (int)mTemp << "/" << (int)dTemp << "/" << (int)yTemp << ")" << endl;
 			}
 		}
 
@@ -1071,16 +1009,15 @@ void Debugger::scanForUINT(MemReaderInterface* mr_intf, QWORD pStart, QWORD size
 
 	vector<string> tokens;
 
-
-	if ( (pStart == 0) || args.length() == 0)
+	if ((pStart == 0) || args.length() == 0)
 	{
 		cout << "    Error: '" << args << "' appears to be an invalid value." << endl;
 		cout << "    Proper usage - sfu number" << endl;
- 
+
 		return;
 	}
 
-	if ( tokenizeString(args, tokens) != 1)
+	if (tokenizeString(args, tokens) != 1)
 	{
 		cout << "    Error: '" << args << "' appears to be an invalid value." << endl;
 		cout << "    Proper usage - sfu number" << endl;
@@ -1093,15 +1030,14 @@ void Debugger::scanForUINT(MemReaderInterface* mr_intf, QWORD pStart, QWORD size
 	if (pStart == 0)
 		return;
 
-	cout << " Scanning for '" << args << "' from 0x" << hex << pStart << " to 0x" << (pStart+4*size) << endl;
+	cout << " Scanning for '" << args << "' from 0x" << hex << pStart << " to 0x" << (pStart + 4 * size) << endl;
 
-	for (pMem=pStart; pMem<(pStart+size*2);)
+	for (pMem = pStart; pMem < (pStart + size * 2);)
 	{
 		if (length == 4)
 			Temp = mr_intf->extractUINT(pMem);
 		if (length == 2)
 			Temp = mr_intf->extractBYTE(pMem);
-
 
 		if (Temp == Find)
 		{
@@ -1112,23 +1048,19 @@ void Debugger::scanForUINT(MemReaderInterface* mr_intf, QWORD pStart, QWORD size
 	}
 }
 
-
-
-
 int Debugger::tokenizeString(string input, vector<string>& tokens)
 {
 	string::size_type from = 0;
 
 	string::size_type to = input.find(",", from);
 
-	
-	while ( to != string::npos )
+	while (to != string::npos)
 	{
-		tokens.push_back(input.substr(from, to-from));
+		tokens.push_back(input.substr(from, to - from));
 
-        from = to + 1;
+		from = to + 1;
 
-        to = input.find(",", from );
+		to = input.find(",", from);
 	}
 
 	tokens.push_back(input.substr(from, input.length()));
@@ -1136,22 +1068,19 @@ int Debugger::tokenizeString(string input, vector<string>& tokens)
 	return (int)tokens.size();
 }
 
-
-
 int Debugger::tokenizeDate(string input, vector<string>& tokens)
 {
 	string::size_type from = 0;
 
 	string::size_type to = input.find("/", from);
 
-	
-	while ( to != string::npos )
+	while (to != string::npos)
 	{
-		tokens.push_back(input.substr(from, to-from));
+		tokens.push_back(input.substr(from, to - from));
 
-        from = to + 1;
+		from = to + 1;
 
-        to = input.find("/", from );
+		to = input.find("/", from);
 	}
 
 	tokens.push_back(input.substr(from, input.length()));
