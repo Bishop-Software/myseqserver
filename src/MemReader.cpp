@@ -175,7 +175,7 @@ bool MemReader::openProcess(string filename, bool first, bool debug)
 
 	// Walk thru each process looking for the given filename
 
-	if (Process32First(hProcessSnap, &pe32))
+	if (hProcessSnap != INVALID_HANDLE_VALUE && Process32First(hProcessSnap, &pe32))
 
 	{
 
@@ -259,10 +259,10 @@ bool MemReader::openProcess(string filename, bool first, bool debug)
 
 		}
 
-		while (hProcessSnap && Process32Next(hProcessSnap, &pe32));
+		while (hProcessSnap != INVALID_HANDLE_VALUE && Process32Next(hProcessSnap, &pe32));
 	}
 
-	if (hProcessSnap)
+	if (hProcessSnap != NULL && hProcessSnap != INVALID_HANDLE_VALUE)
 		CloseHandle(hProcessSnap);
 
 	if (rtn)
@@ -319,7 +319,7 @@ bool MemReader::validateProcess(bool forceCheck)
 
 		// Walk thru each process looking for the process ID we had before
 
-		if (Process32First(hProcessSnap, &pe32))
+		if (hProcessSnap != INVALID_HANDLE_VALUE && Process32First(hProcessSnap, &pe32))
 
 		{
 
@@ -350,7 +350,8 @@ bool MemReader::validateProcess(bool forceCheck)
 			while (Process32Next(hProcessSnap, &pe32));
 		}
 
-		CloseHandle(hProcessSnap);
+		if (hProcessSnap != INVALID_HANDLE_VALUE)
+			CloseHandle(hProcessSnap);
 
 		if (!stillValid)
 
