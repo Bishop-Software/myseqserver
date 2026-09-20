@@ -440,23 +440,7 @@ bool MemReader::extractToBuffer(QWORD offset, char* buffer, UINT size)
 		if (ActualNumberOfBytesToRead < (int)size)
 			size = ActualNumberOfBytesToRead;
 	}
-	bool rtn = false;
-
-	rtn		  = (ReadProcessMemory(currentEQProcessHandle, (void*)offset, (void*)buffer, size, NULL) != 0);
-	DWORD hmm = GetLastError();
-	if (rtn == false && hmm)
-	{
-		char* szError = 0;
-		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |
-						  FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-			NULL,
-			hmm,
-			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-			(LPTSTR)&szError,
-			0,
-			NULL);
-		Sleep(0);
-	}
+	bool rtn = (ReadProcessMemory(currentEQProcessHandle, (void*)offset, (void*)buffer, size, NULL) != 0);
 	return rtn;
 }
 
