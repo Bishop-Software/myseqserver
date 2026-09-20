@@ -5,6 +5,10 @@ if (NOT WIN32)
     message(FATAL_ERROR "myseqserver is Windows-only (winsock2, tlhelp32, Win32 GUI APIs).")
 endif()
 
+if (NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+    message(FATAL_ERROR "myseqserver only supports 64-bit builds. Configure with a 64-bit generator/toolchain (e.g. -A x64, or the CLion x64 Visual Studio toolchain).")
+endif()
+
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
