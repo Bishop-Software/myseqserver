@@ -614,7 +614,7 @@ void ScanForStaticPointer(UINT ptrBlock, UINT sizeBlock, UINT ptrToFind)
 
 	UINT paddr, pTest;
 
-	DWORD tmp;
+	SIZE_T tmp;
 
 
 
@@ -660,7 +660,7 @@ void ScanForFloat(UINT ptrBlock, UINT sizeBlock, float valToFind, const char* ms
 
 	float valTest;
 
-	DWORD tmp;
+	SIZE_T tmp;
 
 
 
@@ -2656,7 +2656,7 @@ void DebugWalkTarget(UINT paddr, bool bForward)
 
 	UINT pNext, pPrev;
 
-	DWORD tmp;
+	SIZE_T tmp;
 
 	int max = DEBUG_WALK_MAX;
 
@@ -2820,7 +2820,7 @@ void DebugWalkSpawnsAndDump(UINT offset, DebugWalkerFormat format, UINT limit)
 
 	UINT paddr, pNext, max;
 
-	DWORD tmp;
+	SIZE_T tmp;
 
 	DWORD out;
 
@@ -3026,7 +3026,7 @@ void DebugMonitorTargets()
 
 	MonBuffer monMatch[DEBUG_MON_MAX], monChange[DEBUG_MON_MAX];
 
-	DWORD tmp;
+	SIZE_T tmp;
 
 	bool performScan = false;
 
@@ -3242,9 +3242,9 @@ void DebugMonitorTargets()
 
 							{
 
-								if (abs(change1-change2)> changeMax)
+								if (abs((int)(change1-change2))> changeMax)
 
-									changeMax=abs(change1-change2);
+									changeMax=abs((int)(change1-change2));
 
 							}
 
