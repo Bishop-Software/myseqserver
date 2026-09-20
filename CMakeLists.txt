@@ -33,20 +33,11 @@ target_link_libraries(MySEQ.server PRIVATE wsock32 iphlpapi ws2_32 psapi kernel3
 target_include_directories(MySEQ.server PRIVATE include)
 target_precompile_headers(MySEQ.server PRIVATE include/stdafx.h)
 
-# --- myseqserverc: the single-file console build -----------------------------
-add_executable(myseqserverc
-    src/myseqserverc.cpp
-)
-target_compile_definitions(myseqserverc PRIVATE WIN32 _CONSOLE)
-target_link_libraries(myseqserverc PRIVATE ws2_32)
-
-# Both binaries look for their .ini files next to the executable / in the
+# MySEQ.server looks for its .ini files next to the executable / in the
 # working directory at runtime; copy them into the build output so a plain
 # "Run" in the IDE works without manual setup.
-foreach(target MySEQ.server myseqserverc)
-    add_custom_command(TARGET ${target} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_SOURCE_DIR}/myseqserver.ini" "${CMAKE_SOURCE_DIR}/config.ini"
-            "$<TARGET_FILE_DIR:${target}>"
-    )
-endforeach()
+add_custom_command(TARGET MySEQ.server POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/myseqserver.ini" "${CMAKE_SOURCE_DIR}/config.ini"
+        "$<TARGET_FILE_DIR:MySEQ.server>"
+)
