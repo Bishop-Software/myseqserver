@@ -17,7 +17,7 @@
 
   ==============================================================================*/
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 
 #include "NetworkServer.h"
@@ -631,7 +631,6 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 						break;
 				}
 			}
-			UINT typeOffset = spawnParser.offsets[spawnParser.OT_type];
 			BYTE result;
 			int pcNum = 0, npcNum = 0, corpseNum = 0;
 			while (pTemp)
@@ -764,9 +763,6 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 
 		if (quickInfo)
 			cout << "MySEQServer: pWorldInfo is 0x" << hex << pTemp << endl;
-
-		if (pTemp)
-			pTemp = pTemp;
 
 		if (pTemp)
 			if (mr_intf->extractToBuffer(pTemp, worldParser.rawBuffer, worldParser.largestOffset))

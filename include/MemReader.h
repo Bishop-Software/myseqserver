@@ -129,5 +129,5 @@ public:
 
 	bool AdjustPrivileges();
 
-	QWORD MemReader::GetModuleBaseAddress(DWORD iProcId, TCHAR* DLLName);
+	QWORD GetModuleBaseAddress(DWORD iProcId, TCHAR* DLLName);
 };

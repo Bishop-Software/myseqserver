@@ -143,8 +143,6 @@ public:
 	// BYTE _class, type, level, hidden;
 
 private:
-	UINT pSpawnZero{};
-
 	string extractRawString(offset_types ot)
 	{
 		return string(&rawBuffer[offsets[ot]]);

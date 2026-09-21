@@ -102,7 +102,7 @@ INT_PTR CALLBACK ServerDialog(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK OffsetDialog(HWND, UINT, WPARAM, LPARAM);
 BOOL WINAPI CtrlHandler(DWORD dwCtrlType);
 
-void DoDebugLoop(void* dummy);
+void DoDebugLoop(void*);
 
 // Services Functions
 void WINAPI ServiceMain(DWORD argc, LPTSTR* argv);
@@ -113,7 +113,7 @@ BOOL InstallService();
 
 BOOL DeleteService();
 
-void WINAPI ServiceMain(DWORD argc, LPTSTR* argv)
+void WINAPI ServiceMain(DWORD, LPTSTR*)
 {
 	m_ServiceStatus.dwServiceType = SERVICE_WIN32;
 
@@ -238,7 +238,7 @@ void WINAPI ServiceCtrlHandler(DWORD Opcode)
 BOOL InstallService()
 {
 	SERVICE_DESCRIPTION sd;
-	LPTSTR szDesc = TEXT("This is the MySEQ Open Service for Everquest");
+	TCHAR szDesc[] = TEXT("This is the MySEQ Open Service for Everquest");
 	SC_HANDLE schSCManager;
 	SC_HANDLE schService;
 	TCHAR ServiceAppPath[MAX_PATH + 1];
@@ -330,7 +330,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 
-	MSG msg = {0};
+	MSG msg = {};
 	HACCEL hAccelTable;
 
 	// This is trigger for re-creating system tray icon if taskbar is restarted while minimized
@@ -376,7 +376,8 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 		if (arg == "-k")
 		{
-			SERVICE_TABLE_ENTRY DispatchTable[] = {{"MySEQServer", ServiceMain}, {NULL, NULL}};
+			static TCHAR serviceName[] = TEXT("MySEQServer");
+			SERVICE_TABLE_ENTRY DispatchTable[] = {{serviceName, ServiceMain}, {NULL, NULL}};
 
 			StartServiceCtrlDispatcher(DispatchTable);
 
@@ -489,8 +490,6 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 		memReader.openFirstProcess("eqgame");
 		_beginthread(DoDebugLoop, 0, NULL);
 	}
-	int loop_counts = 0;
-
 	// Main message loop:
 	while (running)
 	{
@@ -569,7 +568,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 //        In this function, we save the instance handle in a global variable and
 //        create and display the main program window.
 //
-BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
+BOOL InitInstance(HINSTANCE hInstance, int)
 {
 	HWND hWnd;
 	hInst = hInstance; // Store instance handle in our global variable
@@ -713,7 +712,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	int wmId, wmEvent;
+	int wmId;
 	PAINTSTRUCT ps;
 	HDC hdc;
 
@@ -825,8 +824,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 			break;
 		case WM_COMMAND:
-			wmId	= LOWORD(wParam);
-			wmEvent = HIWORD(wParam);
+			wmId = LOWORD(wParam);
 			// Parse the menu selections:
 			switch (wmId)
 			{
@@ -1067,7 +1065,7 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 	return (INT_PTR)FALSE;
 }
 
-INT_PTR CALLBACK OffsetDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK OffsetDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM)
 {
 	switch (message)
 	{
@@ -1276,7 +1274,6 @@ INT_PTR CALLBACK OffsetDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 					ofn.lpstrDefExt = "exe";
 					struct _stat buffer;
 					memset((void*)&buffer, 0, sizeof(buffer));
-					int ret_val = 0;
 					if (GetOpenFileName(&ofn))
 					{
 
@@ -1314,7 +1311,7 @@ void ReadArgs(int argc, char* argv[])
 	if ((arg == "-f") && (argc > 2))
 	{
 		string::size_type index = string(argv[2]).find_last_of("\\/");
-		if (index != -1)
+		if (index != string::npos)
 		{
 			// assume that it contains entire path and file name
 			strcpy_s(iniFile, argv[2]);
@@ -1377,7 +1374,7 @@ void ReadArgs(int argc, char* argv[])
 	}
 }
 
-void DoDebugLoop(void* dummy)
+void DoDebugLoop(void*)
 {
 	debugger.enterDebugLoop(&memReader, &iniReader);
 

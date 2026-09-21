@@ -18,7 +18,7 @@
 
   ==============================================================================*/
 
-#include "StdAfx.h"
+#include "stdafx.h"
 
 #include "IniReader.h"
 
@@ -122,10 +122,8 @@ string IniReader::readEscapeStrings(string section, string entry)
 		bool inescape = false;
 		bool inhex	  = false;
 		int digits	  = 0;
-		int p		  = 0;
 		string in	  = newbuff;
 		string out("");
-		size_t j = in.length();
 		for (size_t i = 0; i < in.length(); i++)
 		{
 			if (inescape == true)
@@ -157,8 +155,6 @@ string IniReader::readEscapeStrings(string section, string entry)
 						buff[4]	  = '\0';
 						int value = strtol(buff, NULL, 16);
 						out += char(value);
-						// buffer[p] = value;
-						// p++;
 						inhex = false;
 					}
 				}

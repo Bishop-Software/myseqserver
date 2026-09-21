@@ -86,13 +86,11 @@ const SpawnInfoOffsetEntry kSpawnInfoOffsets[] = {
 };
 } // namespace
 
-EQGameScanner::EQGameScanner(void)
-{
-}
+EQGameScanner::EQGameScanner()
+= default;
 
-EQGameScanner::~EQGameScanner(void)
-{
-}
+EQGameScanner::~EQGameScanner()
+= default;
 void EQGameScanner::setExe(TCHAR* str)
 {
 	executablePath = str;
@@ -355,7 +353,7 @@ bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, Netwo
 
 	std::ostringstream outputStream;
 
-	WIN32_FILE_ATTRIBUTE_DATA FileData = {0};
+	WIN32_FILE_ATTRIBUTE_DATA FileData = {};
 	if (GetFileAttributesEx(executablePath.c_str(), GetFileExInfoStandard, &FileData))
 	{
 		TCHAR szFileDate[255];
@@ -432,7 +430,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 	std::ostringstream findResults;
 	std::ostringstream outputStream;
 
-	WIN32_FILE_ATTRIBUTE_DATA FileData = {0};
+	WIN32_FILE_ATTRIBUTE_DATA FileData = {};
 	if (GetFileAttributesEx(executablePath.c_str(), GetFileExInfoStandard, &FileData))
 	{
 		TCHAR szFileDate[255];

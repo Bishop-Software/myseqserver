@@ -128,7 +128,7 @@ public:
 		return (UINT)World::worldList.size();
 	}
 
-	World::worldBuffer_t* getNetBufferStart()
+	worldBuffer_t* getNetBufferStart()
 	{
 		return &World::worldList.front();
 	}
