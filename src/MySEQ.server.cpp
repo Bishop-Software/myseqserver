@@ -1065,6 +1065,39 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 	return (INT_PTR)FALSE;
 }
 
+// Checks whether <baseDir><subPath>\eqgame.exe exists (subPath must begin
+// with a path separator, e.g. "\\sony\\everquest", or be empty to check
+// baseDir itself). On success, fills outExePath with the full path to
+// eqgame.exe, optionally fills outDir with the resolved directory and
+// outExeName with "eqgame.exe", and returns true. On failure, none of the
+// outputs are touched, so callers can chain candidates with ||.
+static bool TryEqGamePath(const TCHAR* baseDir, const TCHAR* subPath, TCHAR* outDir, TCHAR* outExePath, TCHAR* outExeName)
+{
+	TCHAR candidateDir[_MAX_PATH];
+	strcpy_s(candidateDir, baseDir);
+	strcat_s(candidateDir, subPath);
+
+	if (_access(candidateDir, 0) != 0)
+		return false;
+
+	TCHAR candidateExe[_MAX_PATH];
+	strcpy_s(candidateExe, candidateDir);
+	strcat_s(candidateExe, "\\eqgame.exe");
+
+	if (_access(candidateExe, 0) != 0)
+		return false;
+
+	if (outDir)
+		strcpy_s(outDir, _MAX_PATH, candidateDir);
+
+	strcpy_s(outExePath, _MAX_PATH, candidateExe);
+
+	if (outExeName)
+		strcpy_s(outExeName, _MAX_PATH, "eqgame.exe");
+
+	return true;
+}
+
 INT_PTR CALLBACK OffsetDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM)
 {
 	switch (message)
@@ -1075,51 +1108,11 @@ INT_PTR CALLBACK OffsetDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM)
 			if (eqFileName[0] == _T('\0'))
 			{
 				TCHAR basePath[_MAX_PATH];
-				TCHAR szChkFile[_MAX_PATH];
-				TCHAR szPath[_MAX_PATH];
 				if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_PROGRAM_FILES, NULL, 0, basePath)))
 				{
-					strcpy_s(szPath, basePath);
-					strcat_s(szPath, "\\sony\\everquest");
-					if (_access(szPath, 0) == 0)
-					{
-						strcpy_s(szChkFile, szPath);
-						strcat_s(szChkFile, "\\eqgame.exe");
-						if (_access(szPath, 0) == 0)
-						{
-							strcpy_s(eqFileName, szChkFile);
-						}
-					}
-					if (eqFileName[0] == _T('\0'))
-					{
-						// attempt 2
-						strcpy_s(szPath, basePath);
-						strcat_s(szPath, "\\soe\\everquest");
-						if (_access(szPath, 0) == 0)
-						{
-							strcpy_s(szChkFile, szPath);
-							strcat_s(szChkFile, "\\eqgame.exe");
-							if (_access(szPath, 0) == 0)
-							{
-								strcpy_s(eqFileName, szChkFile);
-							}
-						}
-					}
-					if (eqFileName[0] == _T('\0'))
-					{
-						// attempt 2
-						strcpy_s(szPath, basePath);
-						strcat_s(szPath, "\\everquest");
-						if (_access(szPath, 0) == 0)
-						{
-							strcpy_s(szChkFile, szPath);
-							strcat_s(szChkFile, "\\eqgame.exe");
-							if (_access(szPath, 0) == 0)
-							{
-								strcpy_s(eqFileName, szChkFile);
-							}
-						}
-					}
+					TryEqGamePath(basePath, "\\sony\\everquest", NULL, eqFileName, NULL)
+						|| TryEqGamePath(basePath, "\\soe\\everquest", NULL, eqFileName, NULL)
+						|| TryEqGamePath(basePath, "\\everquest", NULL, eqFileName, NULL);
 				}
 			}
 
@@ -1176,91 +1169,29 @@ INT_PTR CALLBACK OffsetDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM)
 					ofn.nMaxFile = _MAX_PATH;
 					// if we have an already selected eqgame, set path to it's patch
 
-					// no eqgame selected, so use some defaults paths
-					// check these first
+					// no eqgame selected, so use some default paths, checked in order:
 					// "c:\program files\sony online entertainment\installed games\everquest\"
 					// "c:\program files\sony\everquest\"
 					// "c:\program files\soe\everquest\"
 					// "c:\program files\everquest\"
-					TCHAR basePath[_MAX_PATH];
-					TCHAR szChkFile[_MAX_PATH];
+					// current working directory
 					if (eqExeName[0] == _T('\0'))
 					{
+						TCHAR basePath[_MAX_PATH];
 						if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_PROGRAM_FILES, NULL, 0, basePath)))
 						{
-							strcpy_s(eqFilePath, basePath);
-							strcat_s(eqFilePath, "\\Sony Online Entertainment\\Installed Games\\EverQuest");
-							if (_access(eqFilePath, 0) == 0)
-							{
-								ofn.lpstrInitialDir = eqFilePath;
-								strcpy_s(szChkFile, eqFilePath);
-								strcat_s(szChkFile, "\\eqgame.exe");
-								if (_access(eqFilePath, 0) == 0)
-								{
-									strcpy_s(eqFileName, szChkFile);
-									strcpy_s(eqExeName, "eqgame.exe");
-								}
-							}
-							strcpy_s(eqFilePath, basePath);
-							strcat_s(eqFilePath, "\\sony\\everquest");
-							if (_access(eqFilePath, 0) == 0)
-							{
-								ofn.lpstrInitialDir = eqFilePath;
-								strcpy_s(szChkFile, eqFilePath);
-								strcat_s(szChkFile, "\\eqgame.exe");
-								if (_access(eqFilePath, 0) == 0)
-								{
-									strcpy_s(eqFileName, szChkFile);
-									strcpy_s(eqExeName, "eqgame.exe");
-								}
-							}
-							if (eqExeName[0] == _T('\0'))
-							{
-								// attempt 2
-								strcpy_s(eqFilePath, basePath);
-								strcat_s(eqFilePath, "\\soe\\everquest");
-								if (_access(eqFilePath, 0) == 0)
-								{
-									ofn.lpstrInitialDir = eqFilePath;
-									strcpy_s(szChkFile, eqFilePath);
-									strcat_s(szChkFile, "\\eqgame.exe");
-									if (_access(eqFilePath, 0) == 0)
-									{
-										strcpy_s(eqFileName, szChkFile);
-										strcpy_s(eqExeName, "eqgame.exe");
-									}
-								}
-							}
-							if (eqExeName[0] == _T('\0'))
-							{
-								// attempt 2
-								strcpy_s(eqFilePath, basePath);
-								strcat_s(eqFilePath, "\\everquest");
-								if (_access(eqFilePath, 0) == 0)
-								{
-									ofn.lpstrInitialDir = eqFilePath;
-									strcpy_s(szChkFile, eqFilePath);
-									strcat_s(szChkFile, "\\eqgame.exe");
-									if (_access(eqFilePath, 0) == 0)
-									{
-										strcpy_s(eqFileName, szChkFile);
-										strcpy_s(eqExeName, "eqgame.exe");
-									}
-								}
-							}
-							if (eqExeName[0] == _T('\0'))
-							{
-								GetCurrentDirectory(_MAX_PATH, eqFilePath);
-								ofn.lpstrInitialDir = eqFilePath;
-								strcpy_s(szChkFile, eqFilePath);
-								strcat_s(szChkFile, "\\eqgame.exe");
-								if (_access(eqFilePath, 0) == 0)
-								{
-									strcpy_s(eqFileName, szChkFile);
-									strcpy_s(eqExeName, "eqgame.exe");
-								}
-							}
+							TryEqGamePath(basePath, "\\Sony Online Entertainment\\Installed Games\\EverQuest", eqFilePath, eqFileName, eqExeName)
+								|| TryEqGamePath(basePath, "\\sony\\everquest", eqFilePath, eqFileName, eqExeName)
+								|| TryEqGamePath(basePath, "\\soe\\everquest", eqFilePath, eqFileName, eqExeName)
+								|| TryEqGamePath(basePath, "\\everquest", eqFilePath, eqFileName, eqExeName);
 						}
+						if (eqExeName[0] == _T('\0'))
+						{
+							GetCurrentDirectory(_MAX_PATH, eqFilePath);
+							TryEqGamePath(eqFilePath, "", NULL, eqFileName, eqExeName);
+						}
+						if (eqExeName[0] != _T('\0'))
+							ofn.lpstrInitialDir = eqFilePath;
 					}
 					if (ofn.lpstrInitialDir == 0)
 					{
