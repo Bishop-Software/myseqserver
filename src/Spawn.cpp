@@ -221,13 +221,13 @@ void Spawn::packNetBufferWorld(const World& world)
 
 	packNetBufferStrings(world.tempWorldBuffer.flags, "", "");
 
-	tempNetBuffer.type = world.tempWorldBuffer.hour;
+	tempNetBuffer.worldClock.hour = world.tempWorldBuffer.hour;
 
-	tempNetBuffer._class = world.tempWorldBuffer.minute;
+	tempNetBuffer.worldClock.minute = world.tempWorldBuffer.minute;
 
-	tempNetBuffer.level = world.tempWorldBuffer.day;
+	tempNetBuffer.worldClock.day = world.tempWorldBuffer.day;
 
-	tempNetBuffer.hidden = world.tempWorldBuffer.month;
+	tempNetBuffer.worldClock.month = world.tempWorldBuffer.month;
 
-	tempNetBuffer.race = world.tempWorldBuffer.year;
+	tempNetBuffer.worldClock.year = world.tempWorldBuffer.year;
 }

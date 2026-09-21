@@ -20,6 +20,8 @@
 
 #pragma once
 
+#include <cstddef>
+
 #include "Common.h"
 
 #include "IniReader.h"
@@ -46,11 +48,35 @@ struct netBuffer_t
 
 	UINT owner;
 
-	BYTE type, _class;
+	/*
+	 * This is the only packet shape ever sent on the wire, so a world-clock
+	 * update (flags == NetworkServer::OPT_world, see packNetBufferWorld())
+	 * has nowhere else to go: it reuses these same 8 bytes, read back out
+	 * on the receiving end as EQ's in-game clock instead of spawn
+	 * attributes. The union makes that reinterpretation explicit and
+	 * type-checked instead of relying on unrelated field names lining up
+	 * by coincidence - both members must keep this exact byte layout.
+	 */
+	union
+	{
+		struct
+		{
+			BYTE type, _class;
 
-	UINT race;
+			UINT race;
 
-	BYTE level, hidden;
+			BYTE level, hidden;
+		};
+
+		struct
+		{
+			BYTE hour, minute;
+
+			DWORD year;
+
+			BYTE day, month;
+		} worldClock;
+	};
 
 	UINT primary;
 
@@ -60,6 +86,11 @@ struct netBuffer_t
 
 	UINT flags;
 };
+
+// Catches either view drifting out of sync with the other's byte size
+// (e.g. widening `race` or `worldClock.year` alone) at compile time.
+static_assert(offsetof(netBuffer_t, primary) - offsetof(netBuffer_t, type) == sizeof(decltype(netBuffer_t::worldClock)),
+	"netBuffer_t's spawn-attribute view and worldClock view must stay byte-identical in size");
 
 #pragma pack(pop)
 
