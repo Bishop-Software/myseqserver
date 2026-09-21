@@ -18,7 +18,7 @@
 
   ==============================================================================*/
 
-#include "StdAfx.h"
+#include "stdafx.h"
 
 #include "Spawn.h"
 
@@ -191,7 +191,7 @@ void Spawn::packNetBufferRaw(UINT flags, QWORD _this)
 	tempNetBuffer.hidden = extractRawByte(OT_hidden);
 }
 
-void Spawn::packNetBufferEmpty(UINT flags, QWORD _this)
+void Spawn::packNetBufferEmpty(UINT flags, QWORD)
 
 {
 

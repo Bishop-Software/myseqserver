@@ -67,9 +67,11 @@ private:
 
 public:
 	Exception(int l, string s) :
-		level(l),
-		string(s)
+		string(s),
+		level(l)
 	{
 		;
 	}
+
+	int getLevel() const { return level; }
 };

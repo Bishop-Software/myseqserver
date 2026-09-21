@@ -18,7 +18,7 @@
 
   ==============================================================================*/
 
-#include "StdAfx.h"
+#include "stdafx.h"
 
 #include "MemReader.h"
 
@@ -42,13 +42,13 @@ static const size_t kNameBufLen = 30;
 
 MemReader::MemReader() :
 
-	currentEQProcessID(0),
+	readCount(0),
 
 	currentEQProcessHandle(NULL),
 
-	currentEQProcessBaseAddress(0),
+	currentEQProcessID(0),
 
-	readCount(0)
+	currentEQProcessBaseAddress(0)
 
 {
 	currentEQProcessID			= 0;
@@ -153,7 +153,7 @@ bool MemReader::openProcess(string filename, bool first, bool debug)
 
 	HANDLE hProcessSnap = NULL;
 
-	PROCESSENTRY32 pe32 = {0};
+	PROCESSENTRY32 pe32 = {};
 
 	bool okToAttach = first;
 
@@ -305,7 +305,7 @@ bool MemReader::validateProcess(bool forceCheck)
 
 		HANDLE hProcessSnap = NULL;
 
-		PROCESSENTRY32 pe32 = {0};
+		PROCESSENTRY32 pe32 = {};
 
 		stillValid = false;
 
@@ -431,7 +431,7 @@ bool MemReader::extractToBuffer(QWORD offset, char* buffer, UINT size)
 	MEMORY_BASIC_INFORMATION memInfo;
 	ZeroMemory(&memInfo, sizeof(MEMORY_BASIC_INFORMATION));
 
-	if (int vret = (int)VirtualQueryEx(currentEQProcessHandle, lpAddressToReadFrom, &memInfo, sizeof(MEMORY_BASIC_INFORMATION)))
+	if (VirtualQueryEx(currentEQProcessHandle, lpAddressToReadFrom, &memInfo, sizeof(MEMORY_BASIC_INFORMATION)))
 	{
 
 		int nBytesIntoRegion		  = (int)(lpAddressToReadFrom - (BYTE*)memInfo.BaseAddress);

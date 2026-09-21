@@ -18,7 +18,7 @@
 
   ==============================================================================*/
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "Debugger.h"
 #include <cstdlib>
 #include <string>
@@ -320,7 +320,7 @@ void Debugger::examineRawMemory(MemReaderInterface* mr_intf, offset_types ot)
 	QWORD pMem;
 	UINT index;
 
-	int r, c;
+	UINT r, c;
 
 	memset(buffer, 0, bufSize);
 
