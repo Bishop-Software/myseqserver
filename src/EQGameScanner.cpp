@@ -24,36 +24,67 @@ typedef uint64_t* PQWORD;
 
 /*
  * Offset Value Storage
+ *
+ * Holds the resolved CharInfo pointer for the duration of a ScanSecondary
+ * pass, used as a confidence signal only (see ScanSecondary) - the
+ * SpawnInfo* patterns themselves are already fully concrete byte
+ * signatures and don't need it as an input.
  */
 namespace EQPrimaryOffsets
 {
-QWORD Zone		  = 0x0;
-QWORD ZoneInfo	  = 0x0;
-QWORD SpawnHeader = 0x0;
-QWORD CharInfo	  = 0x0;
-QWORD Items		  = 0x0;
-QWORD Target	  = 0x0;
-QWORD World		  = 0x0;
+QWORD CharInfo = 0x0;
 }; // namespace EQPrimaryOffsets
 
-namespace EQSpawnInfoOffsets
+namespace
 {
-QWORD Next	   = 0x0;
-QWORD Prev	   = 0x0;
-QWORD Lastname = 0x0;
-QWORD X		   = 0x0;
-QWORD Y		   = 0x0;
-QWORD Z		   = 0x0;
-QWORD Speed	   = 0x0;
-QWORD Heading  = 0x0;
-QWORD Name	   = 0x0;
-QWORD Type	   = 0x0;
-QWORD SpawnId  = 0x0;
-QWORD Hide	   = 0x0;
-QWORD Level	   = 0x0;
-QWORD Race	   = 0x0;
-QWORD Class	   = 0x0;
-}; // namespace EQSpawnInfoOffsets
+// The six [Memory Offsets] entries: absolute pointers resolved via
+// findEQAbsolutePointer (RIP-relative disp32 resolution) and compared
+// against/written back to their matching NetworkServer offset slot.
+struct PrimaryOffsetEntry
+{
+	const char* iniSection;
+	NetworkServer::offset_types offsetType;
+};
+
+const PrimaryOffsetEntry kPrimaryOffsets[] = {
+	{"ZoneAddr", NetworkServer::OT_zonename},
+	{"SpawnHeaderAddr", NetworkServer::OT_spawnlist},
+	{"CharInfo", NetworkServer::OT_self},
+	{"ItemsAddr", NetworkServer::OT_ground},
+	{"TargetAddr", NetworkServer::OT_target},
+	{"WorldAddr", NetworkServer::OT_world},
+};
+
+// The SpawnInfo struct-member offsets: plain immediate displacements
+// resolved via findEQPointerOffset, reported but not written back to the
+// ini automatically (ScanSecondary has always been a read-only report).
+struct SpawnInfoOffsetEntry
+{
+	const char* iniSection;
+	const char* displayName;
+};
+
+const SpawnInfoOffsetEntry kSpawnInfoOffsets[] = {
+	{"SpawnInfoNextOffset", "NextOffset"},
+	{"SpawnInfoPrevOffset", "PrevOffset"},
+	{"SpawnInfoLastnameOffset", "LastnameOffset"},
+	{"SpawnInfoXOffset", "XOffset"},
+	{"SpawnInfoYOffset", "YOffset"},
+	{"SpawnInfoZOffset", "ZOffset"},
+	{"SpawnInfoSpeedOffset", "SpeedOffset"},
+	{"SpawnInfoHeadingOffset", "HeadingOffset"},
+	{"SpawnInfoNameOffset", "NameOffset"},
+	{"SpawnInfoTypeOffset", "TypeOffset"},
+	{"SpawnInfoSpawnIDOffset", "SpawnIDOffset"},
+	{"SpawnInfoOwnerIDOffset", "OwnerIDOffset"},
+	{"SpawnInfoHideOffset", "HideOffset"},
+	{"SpawnInfoLevelOffset", "LevelOffset"},
+	{"SpawnInfoRaceOffset", "RaceOffset"},
+	{"SpawnInfoClassOffset", "ClassOffset"},
+	{"SpawnInfoPrimaryOffset", "PrimaryOffset"},
+	{"SpawnInfoOffhandOffset", "OffhandOffset"},
+};
+} // namespace
 
 EQGameScanner::EQGameScanner(void)
 {
@@ -166,30 +197,6 @@ QWORD EQGameScanner::findEQPointerOffset(QWORD startAddress, std::size_t blockSi
 		nRet = *reinterpret_cast<PDWORD>(buffer + matchAddr + std::string(charMask).find_first_of("t"));
 	}
 	delete[] buffer;
-
-	return nRet;
-}
-
-QWORD EQGameScanner::findEQStructureOffset(QWORD startAddress, std::size_t blockSize, const PBYTE byteMask, const PCHAR charMask, const QWORD baseEQPointerAddress)
-{
-	QWORD nRet = 0;
-
-	if (strlen(charMask) == 0)
-		return nRet;
-
-	// Create a new, editable, copy of byteMask.
-	PBYTE newByteMask = new BYTE[strlen(charMask)];
-	memcpy(newByteMask, byteMask, strlen(charMask));
-
-	// Replace the EQPointer in our byteMask with the EQPointer given as an argument.
-	// The location of the EQPointer is denoted by the letter o in our character mask.
-	// Currently we require and always assume that the EQPointer is 4 bytes.
-	PQWORD valueToChange = reinterpret_cast<PQWORD>(newByteMask + std::string(reinterpret_cast<const PCHAR>(charMask)).find_first_of("o"));
-	*valueToChange		 = baseEQPointerAddress;
-
-	// Use the updated byteMask to locate the EQStructureOffset
-	nRet = findEQPointerOffset(startAddress, blockSize, newByteMask, charMask);
-	delete[] newByteMask;
 
 	return nRet;
 }
@@ -339,7 +346,6 @@ bool EQGameScanner::compareData(PBYTE data, PBYTE byteMask, PCHAR charMask)
 
 bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, NetworkServerInterface* net_intf, bool write_out)
 {
-
 	if (!executableExists())
 	{
 		SetDlgItemText(hDlg, IDC_EDIT2, "Error: Could not locate the specified executable file.");
@@ -347,10 +353,6 @@ bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, Netwo
 	}
 	bool reload = false;
 
-	// We'll use this for comparisons
-	QWORD matchAddr = NULL;
-
-	std::ostringstream findResults;
 	std::ostringstream outputStream;
 
 	WIN32_FILE_ATTRIBUTE_DATA FileData = {0};
@@ -361,9 +363,6 @@ bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, Netwo
 		SYSTEMTIME st;
 		FileTimeToSystemTime(&ftLastMod, &st);
 		GetDateFormat(LOCALE_USER_DEFAULT, DATE_SHORTDATE, &st, NULL, szFileDate, 255);
-		string::size_type index = executablePath.find_last_of("\\/");
-		string myfilename		= executablePath.substr(index + 1, executablePath.size()).c_str();
-		// findResults << myfilename.c_str() << " Modified=" << szFileDate << "\r\n";
 		if (write_out)
 			ir_intf->writeStringEntry("File Info", "PatchDate", szFileDate);
 		outputStream << "[File Info]\r\n";
@@ -375,302 +374,60 @@ bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, Netwo
 
 	outputStream << "[Memory Offsets]" << "\r\n";
 
-	// ZoneAddr Neighborhood: 0x4800
-	QWORD mystart;
-	string mypattern;
-	string mymask;
-	QWORD mystart2 = ir_intf->readIntegerEntry("ZoneAddr", "Start", true);
-
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("ZoneAddr", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("ZoneAddr", "Pattern");
-	mymask	  = ir_intf->readStringEntry("ZoneAddr", "Mask", true);
-
-	matchAddr = findEQAbsolutePointer(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-
-	outputStream << "ZoneAddr=0x" << std::hex << matchAddr;
-
-	if (matchAddr != NULL)
+	for (const auto& entry : kPrimaryOffsets)
 	{
-		if (matchAddr == net_intf->current_offset((int)NetworkServer::OT_zonename))
+		QWORD mystart	  = (QWORD)ir_intf->readIntegerEntry(entry.iniSection, "Start", true);
+		string mypattern = ir_intf->readEscapeStrings(entry.iniSection, "Pattern");
+		string mymask	  = ir_intf->readStringEntry(entry.iniSection, "Mask", true);
+
+		QWORD matchAddr = findEQAbsolutePointer(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
+
+		outputStream << entry.iniSection << "=0x" << std::hex << matchAddr;
+
+		if (matchAddr == NULL)
+		{
+			outputStream << " #Not Found\r\n";
+			continue;
+		}
+
+		if (matchAddr == net_intf->current_offset((int)entry.offsetType))
 		{
 			outputStream << " # Match\r\n";
+			continue;
+		}
+
+		if (!write_out)
+		{
+			outputStream << " # Does not match ini file.\r\n";
+			EnableWindow(GetDlgItem(hDlg, IDC_BUTTON2), TRUE);
+			continue;
+		}
+
+		std::stringstream strm;
+		strm << "0x" << std::hex << matchAddr;
+		if (ir_intf->writeStringEntry("Memory Offsets", entry.iniSection, strm.str().c_str()))
+		{
+			reload = true;
+			outputStream << " # Written to ini file\r\n";
 		}
 		else
 		{
-			if (write_out)
-			{
-				std::string strout("0x");
-				std::stringstream strm;
-				strm << std::hex << matchAddr;
-				strout.append(strm.str());
-				if (ir_intf->writeStringEntry("Memory Offsets", "ZoneAddr", strout.c_str()))
-				{
-					reload = true;
-					outputStream << " # Written to ini file\r\n";
-				}
-
-				else
-				{
-					outputStream << " # Found - Write failed\r\n";
-				}
-			}
-			else
-			{
-				outputStream << " # Does not match ini file.\r\n";
-				EnableWindow(GetDlgItem(hDlg, IDC_BUTTON2), TRUE);
-			}
+			outputStream << " # Found - Write failed\r\n";
 		}
 	}
-	else
-	{
-		outputStream << " #Not Found\r\n";
-	}
 
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("SpawnHeaderAddr", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("SpawnHeaderAddr", "Pattern");
-	mymask	  = ir_intf->readStringEntry("SpawnHeaderAddr", "Mask", true);
-
-	// SpawnHeaderAddr Neighborhood: 0x4500
-	matchAddr = findEQAbsolutePointer(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-
-	outputStream << "SpawnHeaderAddr=0x" << std::hex << matchAddr;
-
-	if (matchAddr != NULL)
-	{
-		if (matchAddr == net_intf->current_offset((int)NetworkServer::OT_spawnlist))
-		{
-			outputStream << " # Match\r\n";
-		}
-		else
-		{
-			if (write_out)
-			{
-				std::string strout("0x");
-				std::stringstream strm;
-				strm << std::hex << matchAddr;
-				strout.append(strm.str());
-				if (ir_intf->writeStringEntry("Memory Offsets", "SpawnHeaderAddr", strout.c_str()))
-				{
-					reload = true;
-					outputStream << " # Written to ini file\r\n";
-				}
-
-				else
-				{
-					outputStream << " # Found - Write failed\r\n";
-				}
-			}
-			else
-			{
-				outputStream << " # Does not match ini file.\r\n";
-				EnableWindow(GetDlgItem(hDlg, IDC_BUTTON2), TRUE);
-			}
-		}
-	}
-	else
-	{
-		outputStream << " #Not Found\r\n";
-	}
-
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("CharInfo", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("CharInfo", "Pattern");
-	mymask	  = ir_intf->readStringEntry("CharInfo", "Mask", true);
-
-	// CharInfo
-	matchAddr = findEQAbsolutePointer(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-	outputStream << "CharInfo=0x" << std::hex << matchAddr;
-
-	if (matchAddr != NULL)
-	{
-		if (matchAddr == net_intf->current_offset((int)NetworkServer::OT_self))
-		{
-			outputStream << " # Match\r\n";
-		}
-		else
-		{
-			if (write_out)
-			{
-				std::string strout("0x");
-				std::stringstream strm;
-				strm << std::hex << matchAddr;
-				strout.append(strm.str());
-				if (ir_intf->writeStringEntry("Memory Offsets", "CharInfo", strout.c_str()))
-				{
-					reload = true;
-					outputStream << " # Written to ini file\r\n";
-				}
-
-				else
-				{
-					outputStream << " # Found - Write failed\r\n";
-				}
-			}
-			else
-			{
-				outputStream << " # Does not match ini file.\r\n";
-				EnableWindow(GetDlgItem(hDlg, IDC_BUTTON2), TRUE);
-			}
-		}
-	}
-	else
-	{
-		outputStream << " #Not Found\r\n";
-	}
-
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("ItemsAddr", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("ItemsAddr", "Pattern");
-	mymask	  = ir_intf->readStringEntry("ItemsAddr", "Mask", true);
-
-	// ItemsAddr Neighborhood: 0x4b00
-	matchAddr = findEQAbsolutePointer(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-	outputStream << "ItemsAddr=0x" << std::hex << matchAddr;
-
-	if (matchAddr != NULL)
-	{
-		if (matchAddr == net_intf->current_offset((int)NetworkServer::OT_ground))
-		{
-			outputStream << " # Match\r\n";
-		}
-		else
-		{
-			if (write_out)
-			{
-				std::string strout("0x");
-				std::stringstream strm;
-				strm << std::hex << matchAddr;
-				strout.append(strm.str());
-				if (ir_intf->writeStringEntry("Memory Offsets", "ItemsAddr", strout.c_str()))
-				{
-					reload = true;
-					outputStream << " # Written to ini file\r\n";
-				}
-
-				else
-				{
-					outputStream << " # Found - Write failed\r\n";
-				}
-			}
-			else
-			{
-				outputStream << " # Does not match ini file.\r\n";
-				EnableWindow(GetDlgItem(hDlg, IDC_BUTTON2), TRUE);
-			}
-		}
-	}
-	else
-	{
-		outputStream << " #Not Found\r\n";
-	}
-
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("TargetAddr", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("TargetAddr", "Pattern");
-	mymask	  = ir_intf->readStringEntry("TargetAddr", "Mask", true);
-
-	// TargetAddr Neighboorhood: 0x6300
-	matchAddr = findEQAbsolutePointer(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-	outputStream << "TargetAddr=0x" << std::hex << matchAddr;
-
-	if (matchAddr != NULL)
-	{
-		if (matchAddr == net_intf->current_offset((int)NetworkServer::OT_target))
-		{
-			outputStream << " # Match\r\n";
-		}
-		else
-		{
-			if (write_out)
-			{
-				std::string strout("0x");
-				std::stringstream strm;
-				strm << std::hex << matchAddr;
-				strout.append(strm.str());
-				if (ir_intf->writeStringEntry("Memory Offsets", "TargetAddr", strout.c_str()))
-				{
-					reload = true;
-					outputStream << " # Written to ini file\r\n";
-				}
-
-				else
-				{
-					outputStream << " # Found - Write failed\r\n";
-				}
-			}
-			else
-			{
-				outputStream << " # Does not match ini file.\r\n";
-				EnableWindow(GetDlgItem(hDlg, IDC_BUTTON2), TRUE);
-			}
-		}
-	}
-	else
-	{
-		outputStream << " #Not Found\r\n";
-	}
-
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("WorldAddr", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("WorldAddr", "Pattern");
-	mymask	  = ir_intf->readStringEntry("WorldAddr", "Mask", true);
-
-	// WorldAddr Neighboorhood: 0x6300
-	matchAddr = findEQAbsolutePointer(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-	outputStream << "WorldAddr=0x" << std::hex << matchAddr;
-
-	if (matchAddr != NULL)
-	{
-		if (matchAddr == net_intf->current_offset((int)NetworkServer::OT_world))
-		{
-			outputStream << " # Match\r\n";
-		}
-		else
-		{
-			if (write_out)
-			{
-				std::string strout("0x");
-				std::stringstream strm;
-				strm << std::hex << matchAddr;
-				strout.append(strm.str());
-				if (ir_intf->writeStringEntry("Memory Offsets", "WorldAddr", strout.c_str()))
-				{
-					reload = true;
-					outputStream << " # Written to ini file\r\n";
-				}
-
-				else
-				{
-					outputStream << " # Found - Write failed\r\n";
-				}
-			}
-			else
-			{
-				outputStream << " # Does not match ini file.\r\n";
-				EnableWindow(GetDlgItem(hDlg, IDC_BUTTON2), TRUE);
-			}
-		}
-	}
-	else
-	{
-		outputStream << " #Not Found\r\n";
-	}
-
-	// findResults << "\r\n";
-
-	std::string v = findResults.str() + outputStream.str();
-	SetDlgItemText(hDlg, IDC_EDIT2, v.c_str());
+	SetDlgItemText(hDlg, IDC_EDIT2, outputStream.str().c_str());
 
 	return reload;
 }
 
 void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, NetworkServerInterface* net_intf)
 {
-
 	if (!executableExists())
 	{
 		SetDlgItemText(hDlg, IDC_EDIT2, "Error: Could not locate the specified executable file.");
 		return;
 	}
-
-	// We'll use this for comparisons
-	QWORD matchAddr = NULL;
 
 	std::ostringstream findResults;
 	std::ostringstream outputStream;
@@ -687,269 +444,38 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 		string myfilename		= executablePath.substr(index + 1, executablePath.size()).c_str();
 		findResults << myfilename.c_str() << " Modified=" << szFileDate << "\r\n";
 	}
+
+	// Resolve CharInfo for this scan; a live pattern match is preferred,
+	// falling back to whatever the ini currently has.
 	EQPrimaryOffsets::CharInfo = net_intf->current_offset((int)NetworkServer::OT_self);
-
-	QWORD mystart;
-	string mypattern;
-	string mymask;
-
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("CharInfo", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("CharInfo", "Pattern");
-	mymask	  = ir_intf->readStringEntry("CharInfo", "Mask", true);
-
-	// CharInfo
-	matchAddr = findEQAbsolutePointer(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-
-	if (matchAddr != NULL)
 	{
-		// If we match char info offset by pattern search use it
-		EQPrimaryOffsets::CharInfo = matchAddr;
+		QWORD mystart	  = (QWORD)ir_intf->readIntegerEntry("CharInfo", "Start", true);
+		string mypattern = ir_intf->readEscapeStrings("CharInfo", "Pattern");
+		string mymask	  = ir_intf->readStringEntry("CharInfo", "Mask", true);
+
+		QWORD matchAddr = findEQAbsolutePointer(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
+		if (matchAddr != NULL)
+			EQPrimaryOffsets::CharInfo = matchAddr;
 	}
-	else
-	{
-		// Otherwise use what is in the myseqserver.ini file
-		EQPrimaryOffsets::CharInfo = net_intf->current_offset((int)NetworkServer::OT_self);
-	}
+
 	outputStream << "SpawnInfo Offsets" << "\r\n";
-	matchAddr = 0;
 
-	// SpawnInfo::NextOffset
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("SpawnInfoNextOffset", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("SpawnInfoNextOffset", "Pattern");
-	mymask	  = ir_intf->readStringEntry("SpawnInfoNextOffset", "Mask", true);
+	for (const auto& entry : kSpawnInfoOffsets)
+	{
+		QWORD mystart	  = (QWORD)ir_intf->readIntegerEntry(entry.iniSection, "Start", true);
+		string mypattern = ir_intf->readEscapeStrings(entry.iniSection, "Pattern");
+		string mymask	  = ir_intf->readStringEntry(entry.iniSection, "Mask", true);
 
-	matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
+		QWORD matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
 
-	outputStream << "NextOffset" << ":" << "\r\n";
-	outputStream << "| Match Found @ " << ((matchAddr == NULL) ? "FALSE" : "TRUE") << "\r\n";
-	outputStream << "| Offset -> 0x" << std::hex << matchAddr << "\r\n";
-	outputStream << "\r\n";
-
-	// SpawnInfo::PrevOffset
-	matchAddr = 0;
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("SpawnInfoPrevOffset", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("SpawnInfoPrevOffset", "Pattern");
-	mymask	  = ir_intf->readStringEntry("SpawnInfoPrevOffset", "Mask", true);
-
-	matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-
-	outputStream << "PrevOffset" << ":" << "\r\n";
-	outputStream << "| Match Found @ " << ((matchAddr == NULL) ? "FALSE" : "TRUE") << "\r\n";
-	outputStream << "| Offset -> 0x" << std::hex << matchAddr << "\r\n";
-	outputStream << "\r\n";
-
-	// SpawnInfo::LastnameOffset
-	matchAddr = 0;
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("SpawnInfoLastnameOffset", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("SpawnInfoLastnameOffset", "Pattern");
-	mymask	  = ir_intf->readStringEntry("SpawnInfoLastnameOffset", "Mask", true);
-
-	matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-
-	outputStream << "LastnameOffset" << ":" << "\r\n";
-	outputStream << "| Match Found @ " << ((matchAddr == NULL) ? "FALSE" : "TRUE") << "\r\n";
-	outputStream << "| Offset -> 0x" << std::hex << matchAddr << "\r\n";
-	outputStream << "\r\n";
-
-	// SpawnInfo::XOffset
-	matchAddr = 0;
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("SpawnInfoXOffset", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("SpawnInfoXOffset", "Pattern");
-	mymask	  = ir_intf->readStringEntry("SpawnInfoXOffset", "Mask", true);
-
-	matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-
-	outputStream << "XOffset" << ":" << "\r\n";
-	outputStream << "| Match Found @ " << ((matchAddr == NULL) ? "FALSE" : "TRUE") << "\r\n";
-	outputStream << "| Offset -> 0x" << std::hex << matchAddr << "\r\n";
-	outputStream << "\r\n";
-
-	// SpawnInfo::YOffset
-	matchAddr = 0;
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("SpawnInfoYOffset", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("SpawnInfoYOffset", "Pattern");
-	mymask	  = ir_intf->readStringEntry("SpawnInfoYOffset", "Mask", true);
-
-	matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-
-	outputStream << "YOffset" << ":" << "\r\n";
-	outputStream << "| Match Found @ " << ((matchAddr == NULL) ? "FALSE" : "TRUE") << "\r\n";
-	outputStream << "| Offset -> 0x" << std::hex << matchAddr << "\r\n";
-	outputStream << "\r\n";
-
-	// SpawnInfo::ZOffset
-	matchAddr = 0;
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("SpawnInfoZOffset", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("SpawnInfoZOffset", "Pattern");
-	mymask	  = ir_intf->readStringEntry("SpawnInfoZOffset", "Mask", true);
-
-	matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-
-	outputStream << "ZOffset" << ":" << "\r\n";
-	outputStream << "| Match Found @ " << ((matchAddr == NULL) ? "FALSE" : "TRUE") << "\r\n";
-	outputStream << "| Offset -> 0x" << std::hex << matchAddr << "\r\n";
-	outputStream << "\r\n";
-
-	// SpawnInfo::SpeedOffset
-	matchAddr = 0;
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("SpawnInfoSpeedOffset", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("SpawnInfoSpeedOffset", "Pattern");
-	mymask	  = ir_intf->readStringEntry("SpawnInfoSpeedOffset", "Mask", true);
-
-	matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-
-	outputStream << "SpeedOffset" << ":" << "\r\n";
-	outputStream << "| Match Found @ " << ((matchAddr == NULL) ? "FALSE" : "TRUE") << "\r\n";
-	outputStream << "| Offset -> 0x" << std::hex << matchAddr << "\r\n";
-	outputStream << "\r\n";
-
-	// SpawnInfo::HeadingOffset
-	matchAddr = 0;
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("SpawnInfoHeadingOffset", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("SpawnInfoHeadingOffset", "Pattern");
-	mymask	  = ir_intf->readStringEntry("SpawnInfoHeadingOffset", "Mask", true);
-
-	matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-
-	outputStream << "HeadingOffset" << ":" << "\r\n";
-	outputStream << "| Match Found @ " << ((matchAddr == NULL) ? "FALSE" : "TRUE") << "\r\n";
-	outputStream << "| Offset -> 0x" << std::hex << matchAddr << "\r\n";
-	outputStream << "\r\n";
-
-	// SpawnInfo::NameOffset
-	matchAddr = 0;
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("SpawnInfoNameOffset", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("SpawnInfoNameOffset", "Pattern");
-	mymask	  = ir_intf->readStringEntry("SpawnInfoNameOffset", "Mask", true);
-
-	matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-
-	outputStream << "NameOffset" << ":" << "\r\n";
-	outputStream << "| Match Found @ " << ((matchAddr == NULL) ? "FALSE" : "TRUE") << "\r\n";
-	outputStream << "| Offset -> 0x" << std::hex << matchAddr << "\r\n";
-	outputStream << "\r\n";
-
-	// SpawnInfo::TypeOffset
-	matchAddr = 0;
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("SpawnInfoTypeOffset", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("SpawnInfoTypeOffset", "Pattern");
-	mymask	  = ir_intf->readStringEntry("SpawnInfoTypeOffset", "Mask", true);
-
-	matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-
-	outputStream << "TypeOffset" << ":" << "\r\n";
-	outputStream << "| Match Found @ " << ((matchAddr == NULL) ? "FALSE" : "TRUE") << "\r\n";
-	outputStream << "| Offset -> 0x" << std::hex << matchAddr << "\r\n";
-	outputStream << "\r\n";
-
-	// SpawnInfo::SpawnIDOffset
-	matchAddr = 0;
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("SpawnInfoSpawnIDOffset", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("SpawnInfoSpawnIDOffset", "Pattern");
-	mymask	  = ir_intf->readStringEntry("SpawnInfoSpawnIDOffset", "Mask", true);
-
-	matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-
-	outputStream << "SpawnIDOffset" << ":" << "\r\n";
-	outputStream << "| Match Found @ " << ((matchAddr == NULL) ? "FALSE" : "TRUE") << "\r\n";
-	outputStream << "| Offset -> 0x" << std::hex << matchAddr << "\r\n";
-	outputStream << "\r\n";
-
-	// SpawnInfo::OwnerIDOffset
-	matchAddr = 0;
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("SpawnInfoOwnerIDOffset", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("SpawnInfoOwnerIDOffset", "Pattern");
-	mymask	  = ir_intf->readStringEntry("SpawnInfoOwnerIDOffset", "Mask", true);
-
-	matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-
-	outputStream << "OwnerIDOffset" << ":" << "\r\n";
-	outputStream << "| Match Found @ " << ((matchAddr == NULL) ? "FALSE" : "TRUE") << "\r\n";
-	outputStream << "| Offset -> 0x" << std::hex << matchAddr << "\r\n";
-	outputStream << "\r\n";
-
-	// SpawnInfo::HideOffset
-	matchAddr = 0;
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("SpawnInfoHideOffset", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("SpawnInfoHideOffset", "Pattern");
-	mymask	  = ir_intf->readStringEntry("SpawnInfoHideOffset", "Mask", true);
-
-	matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-
-	outputStream << "HideOffset" << ":" << "\r\n";
-	outputStream << "| Match Found @ " << ((matchAddr == NULL) ? "FALSE" : "TRUE") << "\r\n";
-	outputStream << "| Offset -> 0x" << std::hex << matchAddr << "\r\n";
-	outputStream << "\r\n";
-
-	// SpawnInfo::Prev
-	matchAddr = 0;
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("SpawnInfoLevelOffset", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("SpawnInfoLevelOffset", "Pattern");
-	mymask	  = ir_intf->readStringEntry("SpawnInfoLevelOffset", "Mask", true);
-
-	matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-
-	outputStream << "LevelOffset" << ":" << "\r\n";
-	outputStream << "| Match Found @ " << ((matchAddr == NULL) ? "FALSE" : "TRUE") << "\r\n";
-	outputStream << "| Offset -> 0x" << std::hex << matchAddr << "\r\n";
-	outputStream << "\r\n";
-
-	// SpawnInfo::Prev
-	matchAddr = 0;
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("SpawnInfoRaceOffset", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("SpawnInfoRaceOffset", "Pattern");
-	mymask	  = ir_intf->readStringEntry("SpawnInfoRaceOffset", "Mask", true);
-
-	matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-
-	outputStream << "RaceOffset" << ":" << "\r\n";
-	outputStream << "| Match Found @ " << ((matchAddr == NULL) ? "FALSE" : "TRUE") << "\r\n";
-	outputStream << "| Offset -> 0x" << std::hex << matchAddr << "\r\n";
-	outputStream << "\r\n";
-
-	// SpawnInfo::ClassOffset
-	matchAddr = 0;
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("SpawnInfoClassOffset", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("SpawnInfoClassOffset", "Pattern");
-	mymask	  = ir_intf->readStringEntry("SpawnInfoClassOffset", "Mask", true);
-
-	matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-
-	outputStream << "ClassOffset" << ":" << "\r\n";
-	outputStream << "| Match Found @ " << ((matchAddr == NULL) ? "FALSE" : "TRUE") << "\r\n";
-	outputStream << "| Offset -> 0x" << std::hex << matchAddr << "\r\n";
-	outputStream << "\r\n";
-
-	// SpawnInfo::PrimaryOffset
-	matchAddr = 0;
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("SpawnInfoPrimaryOffset", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("SpawnInfoPrimaryOffset", "Pattern");
-	mymask	  = ir_intf->readStringEntry("SpawnInfoPrimaryOffset", "Mask", true);
-
-	matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-
-	outputStream << "PrimaryOffset" << ":" << "\r\n";
-	outputStream << "| Match Found @ " << ((matchAddr == NULL) ? "FALSE" : "TRUE") << "\r\n";
-	outputStream << "| Offset -> 0x" << std::hex << matchAddr << "\r\n";
-	outputStream << "\r\n";
-
-	// SpawnInfo::OffhandOffset
-	matchAddr = 0;
-	mystart	  = (QWORD)ir_intf->readIntegerEntry("SpawnInfoOffhandOffset", "Start", true);
-	mypattern = ir_intf->readEscapeStrings("SpawnInfoOffhandOffset", "Pattern");
-	mymask	  = ir_intf->readStringEntry("SpawnInfoOffhandOffset", "Mask", true);
-
-	matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
-
-	outputStream << "OffhandOffset" << ":" << "\r\n";
-	outputStream << "| Match Found @ " << ((matchAddr == NULL) ? "FALSE" : "TRUE") << "\r\n";
-	outputStream << "| Offset -> 0x" << std::hex << matchAddr << "\r\n";
-	outputStream << "\r\n";
+		outputStream << entry.displayName << ":" << "\r\n";
+		outputStream << "| Match Found @ " << ((matchAddr == NULL) ? "FALSE" : "TRUE") << "\r\n";
+		outputStream << "| Offset -> 0x" << std::hex << matchAddr << "\r\n";
+		outputStream << "\r\n";
+	}
 
 	findResults << "\r\n";
 
 	std::string v = findResults.str() + outputStream.str();
 	SetDlgItemText(hDlg, IDC_EDIT2, v.c_str());
-
-	return;
 }

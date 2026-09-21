@@ -37,7 +37,6 @@ public:
 	bool executableExists() const;
 	void setExe(TCHAR* str);
 	QWORD findEQPointerOffset(QWORD startAddress, std::size_t blockSize, const PBYTE byteMask, const PCHAR charMask);
-	QWORD findEQStructureOffset(QWORD startAddress, std::size_t blockSize, const PBYTE byteMask, const PCHAR charMask, const QWORD baseEQPointerAddress);
 
 	// Locates a RIP-relative reference (e.g. `lea reg, [rip+disp32]` /
 	// `mov [rip+disp32], reg`) matching byteMask/charMask - the 4 bytes
