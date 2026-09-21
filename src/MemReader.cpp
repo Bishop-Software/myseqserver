@@ -209,10 +209,6 @@ bool MemReader::openProcess(string filename, bool first, bool debug)
 
 						okToAttach = true;
 
-					//	currentEQProcessHandle = OpenProcess(PROCESS_VM_READ, false, currentEQProcessID);
-
-					//	currentEQProcessBaseAddress = GetModuleBaseAddress( pe32.th32ProcessID, pe32.szExeFile);
-
 					continue;
 				}
 

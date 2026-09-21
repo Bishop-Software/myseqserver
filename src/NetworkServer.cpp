@@ -88,10 +88,7 @@ bool NetworkServer::openListenerSocket(bool service)
 	if (WSAStartup(MAKEWORD(1, 1), &wsa) != 0)
 	{
 		MessageBox(NULL, "Error: NetworkServer: Failed to initialize Winsock.", "Failed to initialize Winsock", 0);
-		// ostrstream strm;
 		return false;
-		// strm << "Error: NetworkServer: Failed to initialize Winsock." << ends ; \
-		// throw Exception(EXCLEV_ERROR, strm.str());
 	}
 	// Attempt to get a socket
 	sockListener = socket(AF_INET, SOCK_STREAM, 0);
@@ -99,9 +96,6 @@ bool NetworkServer::openListenerSocket(bool service)
 	{
 		MessageBox(NULL, "Error: NetworkServer: Error creating listener socket.", "Failed to create listener socket.", 0);
 		return false;
-		// ostrstream strm;
-		// strm << "Error: NetworkServer: Error creating listener socket." << ends ; \
-		//throw Exception(EXCLEV_ERROR, strm.str());
 	}
 
 	// Fill out the sockaddr structure with typical values
@@ -132,9 +126,6 @@ bool NetworkServer::openListenerSocket(bool service)
 		{
 			MessageBox(NULL, "Error: NetworkServer: Listen request failed.", "Listen request failed", 0);
 			return false;
-			// ostrstream strm;
-			// strm << "Error: NetworkServer: Listen request failed with code " << dec << WSAGetLastError() << ends ;
-			// throw Exception(EXCLEV_ERROR, strm.str());
 		}
 	}
 	else
@@ -144,9 +135,6 @@ bool NetworkServer::openListenerSocket(bool service)
 		{
 			MessageBox(NULL, "Error: NetworkServer: Listen request failed.", "Listen request failed", 0);
 			return false;
-			// ostrstream strm;
-			// strm << "Error: NetworkServer: Listen request failed with code " << dec << WSAGetLastError() << ends ;
-			// throw Exception(EXCLEV_ERROR, strm.str());
 		}
 		// Switch to Non-Blocking mode
 		WSAAsyncSelect(sockListener, hwnd, 1045, FD_READ | FD_CONNECT | FD_CLOSE | FD_ACCEPT);
@@ -175,45 +163,44 @@ bool NetworkServer::openListenerSocket(bool service)
 			memcpy(&addr, localHost->h_addr_list[i], sizeof(struct in_addr));
 			if (addr.s_net == 0)
 			{
-				// cout << "Broadcast address " << inet_ntoa(addr) << endl;
+				// Broadcast address
 			}
 			else if (addr.s_net == 127)
 			{
-				// cout << "Localhost " << inet_ntoa(addr) << endl;
+				// Localhost
 			}
 			else if (addr.s_net == 169 && addr.s_host == 254)
 			{
-				// cout << "Autoconfig address " << inet_ntoa(addr) << endl;
+				// Autoconfig address
 			}
 			else if (addr.s_net == 192 && addr.s_host == 0)
 			{
-				// cout << "Test-Net-1 address " << inet_ntoa(addr) << endl;
+				// Test-Net-1 address
 			}
 			else if (addr.s_net == 198 && addr.s_host == 51 && addr.s_lh == 100)
 			{
-				// cout << "Test-Net-2 address " << inet_ntoa(addr) << endl;
+				// Test-Net-2 address
 			}
 			else if (addr.s_net == 203 && addr.s_host == 0 && addr.s_lh == 113)
 			{
-				// cout << "Test-Net-3 address " << inet_ntoa(addr) << endl;
+				// Test-Net-3 address
 			}
 			else if (addr.s_net == 192 && addr.s_host == 88 && addr.s_lh == 99)
 			{
-				// cout << "6 to 4 anycast relays address " << inet_ntoa(addr) << endl;
+				// 6 to 4 anycast relays address
 			}
 			else if (addr.s_net == 198 && (addr.s_host == 18 || addr.s_lh == 19))
 			{
-				// cout << "inter-network comms address " << inet_ntoa(addr) << endl;
+				// inter-network comms address
 			}
 			else if (addr.s_net >= 224 && addr.s_net <= 240)
 			{
-				// cout << "Multicast / Limited broadcast address " << inet_ntoa(addr) << endl;
+				// Multicast / Limited broadcast address
 			}
 			else
 			{
 				if (current_host.S_un.S_addr == NULL)
 				{
-					// cout << "current host is null, copying in some values." << endl;
 					memcpy(&current_host, localHost->h_addr_list[i], sizeof(struct in_addr));
 					sprintf_s(active_address, "%s", inet_ntoa(addr));
 				}
@@ -229,14 +216,12 @@ bool NetworkServer::openListenerSocket(bool service)
 						{
 							// our current address does not look like a lan address, so set it.
 							memcpy(&current_host, localHost->h_addr_list[i], sizeof(struct in_addr));
-							// cout << "We have a new lan address." << endl;
 						}
 					}
 					// now update for better (lower) addresses on the same net/host range
 					if (addr.s_net == current_host.s_net && addr.s_host == current_host.s_host && ((addr.s_lh < current_host.s_lh) || (addr.s_lh <= current_host.s_lh && addr.s_impno <= current_host.s_impno)))
 					{
 						memcpy(&current_host, localHost->h_addr_list[i], sizeof(struct in_addr));
-						// cout << "We have an updated better address." << endl;
 					}
 				}
 				sprintf_s(active_address, "%s", inet_ntoa(current_host));
@@ -440,8 +425,6 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 		}
 		// the client no longer expects a return packet for this.
 		// the client continue requesting data the next tick().
-		// spawnParser.packNetBufferRaw(OPT_process, mr_intf->getCurrentPID());
-		// spawnParser.pushNetBuffer();
 		change_process = false;
 		return false;
 	}
