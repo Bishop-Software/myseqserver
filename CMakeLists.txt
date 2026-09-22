@@ -39,7 +39,7 @@ target_precompile_headers(MySEQ.server PRIVATE include/stdafx.h)
 # "Run" in the IDE works without manual setup.
 add_custom_command(TARGET MySEQ.server POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_SOURCE_DIR}/myseqserver.ini" "${CMAKE_SOURCE_DIR}/config.ini"
+        "${CMAKE_SOURCE_DIR}/resources/myseqserver.ini" "${CMAKE_SOURCE_DIR}/resources/config.ini"
         "$<TARGET_FILE_DIR:MySEQ.server>"
 )
 

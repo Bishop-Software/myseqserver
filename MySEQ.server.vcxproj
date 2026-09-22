@@ -109,8 +109,8 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="MySEQ.server.ico" />
-    <None Include="ServerReleaseNotes.html">
+    <None Include="resources\MySEQ.server.ico" />
+    <None Include="resources\ServerReleaseNotes.html">
       <SubType>Designer</SubType>
     </None>
   </ItemGroup>
