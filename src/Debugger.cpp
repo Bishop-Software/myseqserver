@@ -843,9 +843,9 @@ void Debugger::scanForFloat(MemReaderInterface* mr_intf, string args, QWORD pSta
 
 	// For target searches, limit search to 4K. Otherwise scan 64M
 	if (yankPstart)
-		pEnd = pStart + 0x1400000000;
-	else
 		pEnd = pStart + 0x1000;
+	else
+		pEnd = pStart + 0x4000000;
 
 	// First try and get to the initial spawn entity
 	for (pFloat = pStart; pFloat < pEnd; pFloat += 4)
