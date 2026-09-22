@@ -94,6 +94,13 @@ EQGameScanner::~EQGameScanner()
 void EQGameScanner::setExe(TCHAR* str)
 {
 	executablePath = str;
+
+	// loadPEInfo()'s cache is only valid for the exe it was built from;
+	// invalidate it whenever the target changes, so findEQAbsolutePointer
+	// can't silently resolve addresses using a previous exe's image base
+	// and section table.
+	peInfoLoaded = false;
+	peSections.clear();
 }
 bool EQGameScanner::executableExists() const
 {

@@ -42,3 +42,19 @@ add_custom_command(TARGET MySEQ.server POST_BUILD
         "${CMAKE_SOURCE_DIR}/myseqserver.ini" "${CMAKE_SOURCE_DIR}/config.ini"
         "$<TARGET_FILE_DIR:MySEQ.server>"
 )
+
+# --- OffsetScanningTests: offline smoke tests for the byte-pattern scanner --
+# Exercises EQGameScanner::findEQPointerOffset/findEQAbsolutePointer and
+# IniReader::readEscapeStrings against synthetic PE/ini files on disk - no
+# real eqgame.exe needed. A plain console app with a process exit code
+# (0 = all checks passed), so it's CI-runnable as-is.
+add_executable(OffsetScanningTests
+    tests/OffsetScanningTests.cpp
+    src/EQGameScanner.cpp
+    src/IniReader.cpp
+    src/stdafx.cpp
+)
+target_compile_definitions(OffsetScanningTests PRIVATE WIN32 _WINDOWS)
+target_compile_options(OffsetScanningTests PRIVATE /EHsc)
+target_include_directories(OffsetScanningTests PRIVATE include)
+target_precompile_headers(OffsetScanningTests PRIVATE include/stdafx.h)
