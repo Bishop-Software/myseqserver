@@ -24,7 +24,7 @@ help:
 	@echo "   Example: VER=1.19.1 make release"
 
 
-RELFILES += myseqserver.exe myseqserver.ini ServerReleaseNotes.html
+RELFILES += myseqserver.exe resources/myseqserver.ini resources/ServerReleaseNotes.html
 
 .PHONY : release
 release: $(RELFILES)
@@ -33,5 +33,5 @@ ifeq ($(strip $(VER)),)
 else
 	@echo " ==> Creating release myseq.server.$(VER).zip"
 	@if [ ! -d releases ]; then mkdir releases; fi
-	@zip releases/myseq.server.$(VER).zip $(RELFILES)
+	@zip -j releases/myseq.server.$(VER).zip $(RELFILES)
 endif
