@@ -58,6 +58,14 @@ using namespace std;
 
 #define EXCLEV_ERROR 2
 
+// Default 64-bit eqgame.exe image/module base address. Offsets recorded in
+// the .ini files are relative to this base; every offset read out of the
+// target process gets rebased by subtracting this constant and adding the
+// currently-attached process's actual base address (ASLR means the two
+// rarely match). Kept as a single named constant so the ~20 call sites that
+// do this arithmetic can't drift out of sync with each other.
+static const unsigned long long kEQImageBase = 0x140000000ULL;
+
 class Exception : public string
 
 {

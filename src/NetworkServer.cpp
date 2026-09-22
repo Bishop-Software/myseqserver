@@ -504,7 +504,7 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 	if (requestContains(IPT_zone))
 	{
 		if (offsets[OT_zonename])
-			newZoneName = mr_intf->extractString2(offsets[OT_zonename] - 0x140000000 + (QWORD)mr_intf->getCurrentBaseAddress());
+			newZoneName = mr_intf->extractString2(offsets[OT_zonename] - kEQImageBase + (QWORD)mr_intf->getCurrentBaseAddress());
 
 		// Only send zonename response if zone changed
 		if (newZoneName != zoneName)
