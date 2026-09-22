@@ -75,7 +75,18 @@ public:
 private:
 	string extractRawString(World::offset_types ot)
 	{
-		return string(&rawBuffer[World::offsets[(UINT)ot]]);
+		UINT start = World::offsets[(UINT)ot];
+
+		UINT maxLen = (start < largestOffset) ? (largestOffset - start) : 0;
+
+		const char* p = &rawBuffer[start];
+
+		UINT len = 0;
+
+		while (len < maxLen && p[len] != '\0')
+			len++;
+
+		return string(p, len);
 	}
 
 	float extractRawFloat(World::offset_types ot)
