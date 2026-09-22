@@ -24,6 +24,13 @@
 #include <stdlib.h>
 #include <IPHlpApi.h>
 
+// Upper bound on spawn-list walks, matching the ground-item walk's
+// existing cycle guard (see IPT_ground below). Guards against a
+// corrupted/cyclic list (offsets out of sync with the running client)
+// spinning the receive thread forever -- well above any realistic
+// zone's spawn count.
+static const int kMaxSpawnWalk = 5000;
+
 NetworkServer::NetworkServer()
 {
 	sockAddrSize   = sizeof(sockAddr);
@@ -592,7 +599,11 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 				spawnParser.packNetBufferRaw(OPT_spawns, pTemp);
 				spawnParser.pushNetBuffer();
 				numSpawns++;
-				pTemp = spawnParser.extractNextPointer();
+				// Avoid infinite loops from a corrupted/cyclic spawn list
+				if ((numSpawns > kMaxSpawnWalk) || (pTemp == spawnParser.extractNextPointer()))
+					pTemp = 0;
+				else
+					pTemp = spawnParser.extractNextPointer();
 			}
 			else
 				pTemp = 0;
@@ -615,7 +626,7 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 				}
 			}
 			BYTE result;
-			int pcNum = 0, npcNum = 0, corpseNum = 0;
+			int pcNum = 0, npcNum = 0, corpseNum = 0, tallyCount = 0;
 			while (pTemp)
 			{
 				if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer, spawnParser.largestOffset))
@@ -632,7 +643,12 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 						default:
 							corpseNum++;
 					}
-					pTemp = spawnParser.extractNextPointer();
+					tallyCount++;
+					// Avoid infinite loops from a corrupted/cyclic spawn list
+					if ((tallyCount > kMaxSpawnWalk) || (pTemp == spawnParser.extractNextPointer()))
+						pTemp = 0;
+					else
+						pTemp = spawnParser.extractNextPointer();
 				}
 				else
 					pTemp = 0;
