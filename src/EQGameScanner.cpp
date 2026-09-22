@@ -117,15 +117,21 @@ bool EQGameScanner::executableExists() const
 
 QWORD EQGameScanner::findEQPointerOffset(QWORD startAddress, std::size_t blockSize, const PBYTE byteMask, const PCHAR charMask)
 {
+	std::string mask(charMask);
+	size_t tPos = mask.find_first_of("t");
+
+	// A mask with no 't' capture character has nothing to extract; bail out
+	// rather than doing pointer arithmetic with std::string::npos below.
+	if (tPos == std::string::npos)
+		return NULL;
+
 	std::ifstream file(executablePath.c_str(), std::ios::in | std::ios::binary);
 
 	// If the file can't be opened, return NULL for pointer offset.
 	if (!file)
 		return NULL;
 
-	int typelen = 0;
-
-	typelen = (int)std::string(charMask).find_last_of("t") - (int)std::string(charMask).find_first_of("t") + 1;
+	int typelen = (int)mask.find_last_of("t") - (int)tPos + 1;
 
 	if (typelen < 1)
 		typelen = 4;
@@ -152,23 +158,22 @@ QWORD EQGameScanner::findEQPointerOffset(QWORD startAddress, std::size_t blockSi
 			matchAddr = i;
 			if (typelen == 1)
 			{
-				BYTE chechbyteRet = *reinterpret_cast<PBYTE>(buffer + matchAddr + std::string(charMask).find_first_of("t"));
+				BYTE chechbyteRet = *reinterpret_cast<PBYTE>(buffer + matchAddr + tPos);
 				checkRet		  = (QWORD)chechbyteRet;
 			}
 			else if (typelen == 2)
 			{
-				WORD checkwordRet = *reinterpret_cast<PWORD>(buffer + matchAddr + std::string(charMask).find_first_of("t"));
+				WORD checkwordRet = *reinterpret_cast<PWORD>(buffer + matchAddr + tPos);
 				checkRet		  = (QWORD)checkwordRet;
 			}
 			else if (typelen >= 8)
 			{
-				checkRet = *reinterpret_cast<PQWORD>(buffer + matchAddr + std::string(charMask).find_first_of("t"));
+				checkRet = *reinterpret_cast<PQWORD>(buffer + matchAddr + tPos);
 			}
 			else
 			{
-				checkRet = *reinterpret_cast<PDWORD>(buffer + matchAddr + std::string(charMask).find_first_of("t"));
+				checkRet = *reinterpret_cast<PDWORD>(buffer + matchAddr + tPos);
 			}
-			// DWORD checkRet = *reinterpret_cast<PDWORD>(buffer + matchAddr + std::string(charMask).find_first_of("t"));
 			if (checkRet < 536870912)
 				break;
 			else
@@ -178,28 +183,31 @@ QWORD EQGameScanner::findEQPointerOffset(QWORD startAddress, std::size_t blockSi
 
 	// If we didn't find a match, return NULL
 	if (matchAddr == NULL)
+	{
+		delete[] buffer;
 		return NULL;
+	}
 
 	QWORD nRet;
 
 	// Find where our target address we're searching for is stored, and return its value.
 	if (typelen == 1)
 	{
-		BYTE cRet = *reinterpret_cast<PBYTE>(buffer + matchAddr + std::string(charMask).find_first_of("t"));
+		BYTE cRet = *reinterpret_cast<PBYTE>(buffer + matchAddr + tPos);
 		nRet	  = (QWORD)cRet;
 	}
 	else if (typelen == 2)
 	{
-		WORD wRet = *reinterpret_cast<PWORD>(buffer + matchAddr + std::string(charMask).find_first_of("t"));
+		WORD wRet = *reinterpret_cast<PWORD>(buffer + matchAddr + tPos);
 		nRet	  = (QWORD)wRet;
 	}
 	else if (typelen >= 8)
 	{
-		nRet = *reinterpret_cast<PQWORD>(buffer + matchAddr + std::string(charMask).find_first_of("t"));
+		nRet = *reinterpret_cast<PQWORD>(buffer + matchAddr + tPos);
 	}
 	else
 	{
-		nRet = *reinterpret_cast<PDWORD>(buffer + matchAddr + std::string(charMask).find_first_of("t"));
+		nRet = *reinterpret_cast<PDWORD>(buffer + matchAddr + tPos);
 	}
 	delete[] buffer;
 
