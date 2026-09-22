@@ -443,13 +443,13 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 		// Now sent the array of elements
 		if (numElements)
 		{
-			// Show the spawncount (minus the zonename and yourself, if there is targeted mob we will get one extra)
+			// No process is attached on this path, so there are no spawns/items to count
+			// (that count only happens further down, once a valid process is walked).
 			if (quickInfo)
-				cout << "MySEQServer: numSpawns(" << dec << numSpawns << ") numItems(" << numItems << ")" << endl;
+				cout << "MySEQServer: sent keep-alive (no valid process)" << endl;
 
 			send(sockClient, (char*)spawnParser.getNetBufferStart(), numElements * sizeof(netBuffer_t), 0);
 			spawnParser.clearNetBuffer();
-			numSpawns = numItems = 0;
 		}
 
 		return false;
