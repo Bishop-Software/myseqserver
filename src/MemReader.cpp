@@ -444,7 +444,7 @@ float MemReader::extractFloat(QWORD offset)
 
 {
 
-	float rtn;
+	float rtn = 0.0f;
 
 	ReadProcessMemory(currentEQProcessHandle, (void*)offset, (void*)&rtn, 4, NULL);
 
@@ -455,7 +455,7 @@ BYTE MemReader::extractBYTE(QWORD offset)
 
 {
 
-	BYTE rtn;
+	BYTE rtn = 0;
 
 	ReadProcessMemory(currentEQProcessHandle, (void*)offset, (void*)&rtn, 1, NULL);
 
@@ -466,7 +466,7 @@ UINT MemReader::extractUINT(QWORD offset)
 
 {
 
-	UINT rtn;
+	UINT rtn = 0;
 
 	ReadProcessMemory(currentEQProcessHandle, (void*)offset, (void*)&rtn, 4, NULL);
 
