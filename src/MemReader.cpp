@@ -53,7 +53,7 @@ MemReader::MemReader() :
 {
 	currentEQProcessID			= 0;
 	currentEQProcessHandle		= NULL;
-	currentEQProcessBaseAddress = 0x140000000;
+	currentEQProcessBaseAddress = kEQImageBase;
 }
 
 MemReader::~MemReader()
@@ -131,7 +131,7 @@ bool MemReader::openFirstProcess(string filename, bool debug)
 
 	currentEQProcessID = 0;
 
-	currentEQProcessBaseAddress = 0x140000000;
+	currentEQProcessBaseAddress = kEQImageBase;
 
 	return openProcess(filename, true, debug);
 }
@@ -247,7 +247,7 @@ bool MemReader::openProcess(string filename, bool first, bool debug)
 
 					currentEQProcessID = 0;
 
-					currentEQProcessBaseAddress = 0x140000000;
+					currentEQProcessBaseAddress = kEQImageBase;
 
 					currentEQProcessHandle = NULL;
 				}
@@ -281,7 +281,7 @@ void MemReader::closeProcess()
 
 	currentEQProcessID = 0;
 
-	currentEQProcessBaseAddress = 0x140000000;
+	currentEQProcessBaseAddress = kEQImageBase;
 }
 
 bool MemReader::validateProcess(bool forceCheck)
@@ -374,7 +374,7 @@ QWORD MemReader::extractRAWPointer(QWORD offset)
 
 	QWORD rtn = 0;
 
-	ReadProcessMemory(currentEQProcessHandle, (void*)(offset - 0x140000000 + currentEQProcessBaseAddress), (void*)&rtn, sizeof(rtn), NULL);
+	ReadProcessMemory(currentEQProcessHandle, (void*)(offset - kEQImageBase + currentEQProcessBaseAddress), (void*)&rtn, sizeof(rtn), NULL);
 
 	// cout << "offset " << offset << " currenteq " << currentEQProcessBaseAddress << endl;
 

@@ -326,18 +326,18 @@ void Debugger::examineRawMemory(MemReaderInterface* mr_intf, offset_types ot)
 
 	// pZone is a direct pointer. All others are indirect.
 	if (ot == OT_zonename)
-		pMem = offsets[ot] - 0x140000000 + mr_intf->getCurrentBaseAddress();
+		pMem = offsets[ot] - kEQImageBase + mr_intf->getCurrentBaseAddress();
 	else
 		pMem = mr_intf->extractRAWPointer(offsets[ot]);
 
-	cout << " Display Raw Memory from 0x" << (pMem + 0x140000000 - mr_intf->getCurrentBaseAddress()) << " to 0x" << (pMem + bufSize + 0x140000000 - mr_intf->getCurrentBaseAddress()) << endl;
+	cout << " Display Raw Memory from 0x" << (pMem + kEQImageBase - mr_intf->getCurrentBaseAddress()) << " to 0x" << (pMem + bufSize + kEQImageBase - mr_intf->getCurrentBaseAddress()) << endl;
 
 	// Read the raw memory into our local buffer
 	if (pMem)
 	{
 		if (!(mr_intf->extractToBuffer(pMem, buffer, bufSize)))
 		{
-			cout << " Failed to read memory at address 0x" << hex << (pMem + 0x140000000 - mr_intf->getCurrentBaseAddress()) << endl;
+			cout << " Failed to read memory at address 0x" << hex << (pMem + kEQImageBase - mr_intf->getCurrentBaseAddress()) << endl;
 
 			return;
 		}
@@ -390,7 +390,7 @@ void Debugger::processSpawn(MemReaderInterface* mr_intf, offset_types ot)
 
 	// pZone is a direct pointer. All others are indirect.
 	if (ot == OT_zonename)
-		pMem = offsets[ot] - 0x140000000 + mr_intf->getCurrentBaseAddress();
+		pMem = offsets[ot] - kEQImageBase + mr_intf->getCurrentBaseAddress();
 	else
 		pMem = mr_intf->extractRAWPointer(offsets[ot]);
 
@@ -398,7 +398,7 @@ void Debugger::processSpawn(MemReaderInterface* mr_intf, offset_types ot)
 	{
 		if (!(mr_intf->extractToBuffer(pMem, spawnParser.rawBuffer, spawnParser.largestOffset)))
 		{
-			cout << " Failed to read memory at address 0x" << hex << (pMem + 0x140000000 - mr_intf->getCurrentBaseAddress()) << endl;
+			cout << " Failed to read memory at address 0x" << hex << (pMem + kEQImageBase - mr_intf->getCurrentBaseAddress()) << endl;
 
 			return;
 		}
@@ -465,7 +465,7 @@ void Debugger::walkSpawnList(MemReaderInterface* mr_intf, offset_types ot, bool 
 	{
 		if (!(mr_intf->extractToBuffer(pMem, spawnParser.rawBuffer, spawnParser.largestOffset)))
 		{
-			cout << " Failed to read memory at address 0x" << hex << (pMem + 0x140000000 - mr_intf->getCurrentBaseAddress()) << endl;
+			cout << " Failed to read memory at address 0x" << hex << (pMem + kEQImageBase - mr_intf->getCurrentBaseAddress()) << endl;
 
 			return;
 		}
@@ -529,7 +529,7 @@ void Debugger::walkSpawnList(MemReaderInterface* mr_intf, offset_types ot, bool 
 
 	if (reverse)
 		if (pPrev != 0)
-			scanForPtr(mr_intf, pMem, 0x140000000, 0x1800000);
+			scanForPtr(mr_intf, pMem, kEQImageBase, 0x1800000);
 }
 
 void Debugger::scanForPtr(MemReaderInterface* mr_intf, QWORD pSearch, QWORD pStart, QWORD size)
@@ -553,7 +553,7 @@ void Debugger::scanForPtr(MemReaderInterface* mr_intf, QWORD pSearch, QWORD pSta
 
 		if (pSearch == pExtracted)
 		{
-			cout << " Pointer match found for 0x" << hex << pSearch << " at 0x" << (pMem + 0x140000000 - mr_intf->getCurrentBaseAddress()) << endl;
+			cout << " Pointer match found for 0x" << hex << pSearch << " at 0x" << (pMem + kEQImageBase - mr_intf->getCurrentBaseAddress()) << endl;
 		}
 	}
 }
@@ -572,7 +572,7 @@ void Debugger::scanForString(MemReaderInterface* mr_intf, offset_types ot, QWORD
 		return;
 	}
 
-	pStart = offsets[ot] - 4 * size - 0x140000000 + mr_intf->getCurrentBaseAddress();
+	pStart = offsets[ot] - 4 * size - kEQImageBase + mr_intf->getCurrentBaseAddress();
 
 	if (ot == OT_ground)
 		nameOffset = itemParser.offsets[itemParser.OT_name];
@@ -601,7 +601,7 @@ void Debugger::scanForString(MemReaderInterface* mr_intf, offset_types ot, QWORD
 
 				if (searchStr == buffer)
 				{
-					cout << " Pointer match found at 0x" << hex << (pMem + 0x140000000 - mr_intf->getCurrentBaseAddress()) << endl;
+					cout << " Pointer match found at 0x" << hex << (pMem + kEQImageBase - mr_intf->getCurrentBaseAddress()) << endl;
 				}
 			}
 
@@ -626,7 +626,7 @@ void Debugger::scanForString(MemReaderInterface* mr_intf, offset_types ot, QWORD
 
 				if (searchStr == spawnName)
 				{
-					cout << " Pointer match found at 0x" << (pMem + 0x140000000 - mr_intf->getCurrentBaseAddress()) << endl;
+					cout << " Pointer match found at 0x" << (pMem + kEQImageBase - mr_intf->getCurrentBaseAddress()) << endl;
 				}
 			}
 
@@ -651,7 +651,7 @@ void Debugger::scanForString(MemReaderInterface* mr_intf, offset_types ot, QWORD
 
 				if (itemName.compare(0, 2, searchStr) == 0)
 				{
-					cout << " Pointer match found at 0x" << (pMem + 0x140000000 - mr_intf->getCurrentBaseAddress()) << ". Full string is " << itemName << endl;
+					cout << " Pointer match found at 0x" << (pMem + kEQImageBase - mr_intf->getCurrentBaseAddress()) << ". Full string is " << itemName << endl;
 				}
 			}
 
@@ -670,7 +670,7 @@ void Debugger::scanForString(MemReaderInterface* mr_intf, offset_types ot, QWORD
 
 				if (itemName.compare(0, 2, searchStr) == 0)
 				{
-					cout << " Pointer match found at 0x" << (pMem + 0x140000000 - mr_intf->getCurrentBaseAddress()) << ". Full string is " << itemName << endl;
+					cout << " Pointer match found at 0x" << (pMem + kEQImageBase - mr_intf->getCurrentBaseAddress()) << ". Full string is " << itemName << endl;
 				}
 			}
 
@@ -775,7 +775,7 @@ void Debugger::scanForFloat(MemReaderInterface* mr_intf, string args, QWORD pSta
 			{
 
 				pStart = strtol(tokens[3].c_str(), NULL, 16);
-				pStart = pStart - 0x140000000 + mr_intf->getCurrentBaseAddress();
+				pStart = pStart - kEQImageBase + mr_intf->getCurrentBaseAddress();
 			}
 			xFind = (float)atof(tokens[0].c_str());
 
@@ -795,7 +795,7 @@ void Debugger::scanForFloat(MemReaderInterface* mr_intf, string args, QWORD pSta
 			if (yankPstart)
 			{
 				pStart = atoi(tokens[2].c_str());
-				pStart = pStart - 0x140000000 + mr_intf->getCurrentBaseAddress();
+				pStart = pStart - kEQImageBase + mr_intf->getCurrentBaseAddress();
 
 				dCheck = true;
 			}
@@ -814,7 +814,7 @@ void Debugger::scanForFloat(MemReaderInterface* mr_intf, string args, QWORD pSta
 			if (yankPstart)
 			{
 				pStart = atoi(tokens[1].c_str());
-				pStart = pStart - 0x140000000 + mr_intf->getCurrentBaseAddress();
+				pStart = pStart - kEQImageBase + mr_intf->getCurrentBaseAddress();
 
 				sCheck = true;
 			}
@@ -965,7 +965,7 @@ void Debugger::scanForWorldFromDate(MemReaderInterface* mr_intf, offset_types ot
 	if (pStart == 0)
 		return;
 
-	pStart = pStart - 0x140000000 + mr_intf->getCurrentBaseAddress();
+	pStart = pStart - kEQImageBase + mr_intf->getCurrentBaseAddress();
 
 	cout << " Scanning for '" << args << "' from 0x" << hex << pStart << " to 0x" << (pStart + 4 * size) << endl;
 
@@ -991,7 +991,7 @@ void Debugger::scanForWorldFromDate(MemReaderInterface* mr_intf, offset_types ot
 
 			if (dTemp == dFind && mTemp == mFind && yTemp == yFind)
 			{
-				cout << hex << "  Date match found at offset 0x" << (pMem + 0x140000000 - mr_intf->getCurrentBaseAddress()) << dec << " (" << (int)mTemp << "/" << (int)dTemp << "/" << (int)yTemp << ")" << endl;
+				cout << hex << "  Date match found at offset 0x" << (pMem + kEQImageBase - mr_intf->getCurrentBaseAddress()) << dec << " (" << (int)mTemp << "/" << (int)dTemp << "/" << (int)yTemp << ")" << endl;
 			}
 		}
 
