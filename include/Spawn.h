@@ -176,7 +176,18 @@ public:
 private:
 	string extractRawString(offset_types ot)
 	{
-		return string(&rawBuffer[offsets[ot]]);
+		UINT start = offsets[ot];
+
+		UINT maxLen = (start < largestOffset) ? (largestOffset - start) : 0;
+
+		const char* p = &rawBuffer[start];
+
+		UINT len = 0;
+
+		while (len < maxLen && p[len] != '\0')
+			len++;
+
+		return string(p, len);
 	}
 
 	float extractRawFloat(offset_types ot)
