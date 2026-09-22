@@ -53,7 +53,7 @@ void NetworkServer::listIPAddresses()
 	hostent* localHost;
 	int j	  = 0;
 	localHost = gethostbyname("localhost");
-	for (int i = 0; localHost->h_addr_list[i] != 0; ++i)
+	for (int i = 0; localHost && localHost->h_addr_list[i] != 0; ++i)
 	{
 		struct in_addr addr;
 		memcpy(&addr, localHost->h_addr_list[i], sizeof(struct in_addr));
@@ -68,7 +68,7 @@ void NetworkServer::listIPAddresses()
 	}
 
 	localHost = gethostbyname("");
-	for (int i = 0; localHost->h_addr_list[i] != 0; ++i)
+	for (int i = 0; localHost && localHost->h_addr_list[i] != 0; ++i)
 	{
 		struct in_addr addr;
 		memcpy(&addr, localHost->h_addr_list[i], sizeof(struct in_addr));
@@ -150,7 +150,7 @@ bool NetworkServer::openListenerSocket(bool service)
 		hostent* localHost;
 
 		localHost = gethostbyname("localhost");
-		for (int i = 0; localHost->h_addr_list[i] != 0; ++i)
+		for (int i = 0; localHost && localHost->h_addr_list[i] != 0; ++i)
 		{
 			struct in_addr addr;
 			memcpy(&addr, localHost->h_addr_list[i], sizeof(struct in_addr));
@@ -164,7 +164,7 @@ bool NetworkServer::openListenerSocket(bool service)
 		current_host.S_un.S_addr = NULL;
 
 		localHost = gethostbyname("");
-		for (int i = 0; localHost->h_addr_list[i] != 0; ++i)
+		for (int i = 0; localHost && localHost->h_addr_list[i] != 0; ++i)
 		{
 			struct in_addr addr;
 			memcpy(&addr, localHost->h_addr_list[i], sizeof(struct in_addr));
