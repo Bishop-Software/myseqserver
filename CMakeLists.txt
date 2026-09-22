@@ -29,7 +29,7 @@ add_executable(MySEQ.server WIN32
     MySEQ.server.rc
 )
 target_compile_definitions(MySEQ.server PRIVATE WIN32 _WINDOWS)
-target_compile_options(MySEQ.server PRIVATE /EHsc)
+target_compile_options(MySEQ.server PRIVATE /EHsc /W4 /analyze)
 target_link_libraries(MySEQ.server PRIVATE wsock32 iphlpapi ws2_32 psapi kernel32)
 target_include_directories(MySEQ.server PRIVATE include)
 target_precompile_headers(MySEQ.server PRIVATE include/stdafx.h)
@@ -55,6 +55,6 @@ add_executable(OffsetScanningTests
     src/stdafx.cpp
 )
 target_compile_definitions(OffsetScanningTests PRIVATE WIN32 _WINDOWS)
-target_compile_options(OffsetScanningTests PRIVATE /EHsc)
+target_compile_options(OffsetScanningTests PRIVATE /EHsc /W4 /analyze)
 target_include_directories(OffsetScanningTests PRIVATE include)
 target_precompile_headers(OffsetScanningTests PRIVATE include/stdafx.h)

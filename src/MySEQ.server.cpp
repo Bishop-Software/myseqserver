@@ -398,10 +398,6 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 	if (argc > 1 && (!console_mode && !debug_mode && !services && !otherini))
 	{
-		string arg;
-
-		arg = argv[1];
-
 		cout << "   Usage: server debug" << endl;
 		cout << "          server console" << endl;
 		cout << "          server -f [IniFileName]" << endl;
