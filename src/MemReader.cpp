@@ -106,9 +106,18 @@ void MemReader::enableDebugPrivileges()
 
 	DWORD Bufferlen;
 
-	OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES ^ TOKEN_QUERY, &hToken);
+	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken))
+	{
+		cout << "MemReader: OpenProcessToken failed, error " << GetLastError() << endl;
+		return;
+	}
 
-	LookupPrivilegeValue(NULL, SE_DEBUG_NAME, &ALUID);
+	if (!LookupPrivilegeValue(NULL, SE_DEBUG_NAME, &ALUID))
+	{
+		cout << "MemReader: LookupPrivilegeValue failed, error " << GetLastError() << endl;
+		CloseHandle(hToken);
+		return;
+	}
 
 	TP.PrivilegeCount = 1;
 
@@ -116,7 +125,10 @@ void MemReader::enableDebugPrivileges()
 
 	TP.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
 
-	AdjustTokenPrivileges(hToken, false, &TP, sizeof(OldTP), &OldTP, &Bufferlen);
+	if (!AdjustTokenPrivileges(hToken, false, &TP, sizeof(OldTP), &OldTP, &Bufferlen))
+	{
+		cout << "MemReader: AdjustTokenPrivileges failed, error " << GetLastError() << endl;
+	}
 
 	CloseHandle(hToken);
 }

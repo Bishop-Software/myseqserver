@@ -110,11 +110,6 @@ private:
 		return *reinterpret_cast<BYTE*>(&rawBuffer[offsets[ot]]);
 	}
 
-	int extractRawInt(const offset_types ot) const
-	{
-		return *reinterpret_cast<int*>(&rawBuffer[offsets[ot]]);
-	}
-
 public:
 	Item();
 	~Item();
