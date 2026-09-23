@@ -138,7 +138,8 @@ QWORD EQGameScanner::findEQPointerOffset(QWORD startAddress, std::size_t blockSi
 
 	// Set up our temporary storage variables
 	PBYTE buffer	= new BYTE[blockSize];
-	QWORD matchAddr = NULL;
+	QWORD matchAddr = 0;
+	bool found		= false;
 
 	// I like clean memory.
 	memset(buffer, 0, blockSize);
@@ -175,14 +176,15 @@ QWORD EQGameScanner::findEQPointerOffset(QWORD startAddress, std::size_t blockSi
 				checkRet = *reinterpret_cast<PDWORD>(buffer + matchAddr + tPos);
 			}
 			if (checkRet < 536870912)
+			{
+				found = true;
 				break;
-			else
-				matchAddr = NULL;
+			}
 		}
 	}
 
 	// If we didn't find a match, return NULL
-	if (matchAddr == NULL)
+	if (!found)
 	{
 		delete[] buffer;
 		return NULL;

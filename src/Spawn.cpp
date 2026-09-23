@@ -22,6 +22,8 @@
 
 #include "Spawn.h"
 
+#include "NetworkServer.h"
+
 Spawn::Spawn(void)
 
 {
@@ -155,7 +157,7 @@ void Spawn::packNetBufferRaw(UINT flags, QWORD _this)
 
 	// otherwise use the real id.
 
-	if (flags == 0x06)
+	if (flags == NetworkServer::OPT_process)
 	{
 
 		tempNetBuffer.id = (UINT)_this;

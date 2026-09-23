@@ -109,11 +109,6 @@ private:
 		return *((BYTE*)&rawBuffer[World::offsets[(UINT)ot]]);
 	}
 
-	int extractRawInt(World::offset_types ot)
-	{
-		return *((int*)&rawBuffer[World::offsets[(UINT)ot]]);
-	}
-
 public:
 	World(void);
 	~World();

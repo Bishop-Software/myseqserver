@@ -210,11 +210,6 @@ private:
 		return *reinterpret_cast<WORD*>(&rawBuffer[offsets[ot]]);
 	}
 
-	int extractRawInt(const offset_types ot) const
-	{
-		return *reinterpret_cast<int*>(&rawBuffer[offsets[ot]]);
-	}
-
 public:
 	BYTE extractRawByte(const offset_types ot) const
 	{
