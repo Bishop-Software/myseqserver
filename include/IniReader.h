@@ -27,17 +27,17 @@ class IniReaderInterface
 {
 
 public:
-	virtual void openFile(string filename) = 0;
+	virtual void openFile(const string& filename) = 0;
 
-	virtual void openConfigFile(string filename) = 0;
+	virtual void openConfigFile(const string& filename) = 0;
 
-	virtual string readStringEntry(string section, string entry, bool config = false) = 0;
+	virtual string readStringEntry(const string& section, const string& entry, bool config = false) = 0;
 
-	virtual QWORD readIntegerEntry(string section, string entry, bool config = false) = 0;
+	virtual QWORD readIntegerEntry(const string& section, const string& entry, bool config = false) = 0;
 
-	virtual bool writeStringEntry(string section, string entry, string value, bool config = false) = 0;
+	virtual bool writeStringEntry(const string& section, const string& entry, const string& value, bool config = false) = 0;
 
-	virtual string readEscapeStrings(string section, string entry) = 0;
+	virtual string readEscapeStrings(const string& section, const string& entry) = 0;
 };
 
 class IniReader : public IniReaderInterface
@@ -58,17 +58,17 @@ private:
 	bool StartMinimized;
 
 public:
-	void openFile(string filename) override;
+	void openFile(const string& filename) override;
 
-	void openConfigFile(string filename) override;
+	void openConfigFile(const string& filename) override;
 
-	string readStringEntry(string section, string entry, bool config = false) override;
+	string readStringEntry(const string& section, const string& entry, bool config = false) override;
 
-	string readEscapeStrings(string section, string entry) override;
+	string readEscapeStrings(const string& section, const string& entry) override;
 
-	QWORD readIntegerEntry(string section, string entry, bool config = false) override;
+	QWORD readIntegerEntry(const string& section, const string& entry, bool config = false) override;
 
-	bool writeStringEntry(string section, string entry, string value, bool config = false) override;
+	bool writeStringEntry(const string& section, const string& entry, const string& value, bool config = false) override;
 
 	string GetPatchDate();
 

@@ -133,7 +133,7 @@ void MemReader::enableDebugPrivileges()
 
 /* Find the first process to match the given filename */
 
-bool MemReader::openFirstProcess(string filename, bool debug)
+bool MemReader::openFirstProcess(const string& filename, bool debug)
 
 {
 
@@ -148,7 +148,7 @@ bool MemReader::openFirstProcess(string filename, bool debug)
 
 /* Find the next process to match the given filename */
 
-bool MemReader::openNextProcess(string filename, bool debug)
+bool MemReader::openNextProcess(const string& filename, bool debug)
 
 {
 

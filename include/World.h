@@ -118,7 +118,7 @@ public:
 
 	void init(IniReaderInterface* ir_intf);
 
-	void setOffset(World::offset_types ot, int value, string name);
+	void setOffset(World::offset_types ot, int value, const string& name);
 
 	void packWorldBuffer(UINT flags);
 
