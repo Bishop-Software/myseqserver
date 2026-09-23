@@ -20,8 +20,6 @@
 #include "EQGameScanner.h"
 #include "minwindef.h"
 
-typedef uint64_t* PQWORD;
-
 /*
  * Offset Value Storage
  *

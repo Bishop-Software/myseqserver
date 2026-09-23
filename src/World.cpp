@@ -59,13 +59,13 @@ void World::init(IniReaderInterface* ir_intf)
 
 	largestOffset = 0;
 
-	for (int i = 0; i < OT_max; i++)
+	for (const auto offset : offsets)
 
 	{
 
-		if (offsets[i] > largestOffset)
+		if (offset > largestOffset)
 
-			largestOffset = offsets[i];
+			largestOffset = offset;
 	}
 
 	largestOffset += 30;

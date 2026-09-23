@@ -52,7 +52,12 @@
 
 #include <math.h>
 
+#include <cstdint>
+
 using namespace std;
+
+using QWORD = uint64_t;
+using PQWORD = uint64_t*;
 
 #define EXCLEV_WARNING 1
 

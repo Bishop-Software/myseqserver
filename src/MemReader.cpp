@@ -32,8 +32,6 @@
 
 #define TO_LOWER(str) (transform(str.begin(), str.end(), str.begin(), (int (*)(int))tolower))
 
-typedef uint64_t QWORD;
-
 // Buffer size used by extractString/extractString2 for reading short,
 // null-terminated names (spawn names, zone names, etc.) out of the target
 // process. Kept as a single constant so the declared buffer and the amount

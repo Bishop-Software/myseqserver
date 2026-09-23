@@ -22,8 +22,6 @@
 
 #include "Common.h"
 
-typedef uint64_t QWORD;
-
 class IniReaderInterface
 
 {
@@ -60,17 +58,17 @@ private:
 	bool StartMinimized;
 
 public:
-	void openFile(string filename);
+	void openFile(string filename) override;
 
-	void openConfigFile(string filename);
+	void openConfigFile(string filename) override;
 
-	string readStringEntry(string section, string entry, bool config = false);
+	string readStringEntry(string section, string entry, bool config = false) override;
 
-	string readEscapeStrings(string section, string entry);
+	string readEscapeStrings(string section, string entry) override;
 
-	QWORD readIntegerEntry(string section, string entry, bool config = false);
+	QWORD readIntegerEntry(string section, string entry, bool config = false) override;
 
-	bool writeStringEntry(string section, string entry, string value, bool config = false);
+	bool writeStringEntry(string section, string entry, string value, bool config = false) override;
 
 	string GetPatchDate();
 

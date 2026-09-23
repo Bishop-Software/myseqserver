@@ -26,8 +26,6 @@
 
 #include <tlhelp32.h>
 
-typedef uint64_t QWORD;
-
 // The interface classes can be extended, but never changed! They force backwards compatibility.
 
 class MemReaderInterface
@@ -92,39 +90,39 @@ public:
 
 	~MemReader();
 
-	bool isValid();
+	bool isValid() override;
 
 	void enableDebugPrivileges();
 
-	bool openFirstProcess(string filename, bool debug = false);
+	bool openFirstProcess(string filename, bool debug = false) override;
 
-	bool openNextProcess(string filename, bool debug = false);
+	bool openNextProcess(string filename, bool debug = false) override;
 
 	void closeProcess();
 
 	bool validateProcess(bool forceCheck);
 
-	QWORD extractPointer(QWORD offset);
+	QWORD extractPointer(QWORD offset) override;
 
-	QWORD extractRAWPointer(QWORD offset);
+	QWORD extractRAWPointer(QWORD offset) override;
 
-	string extractString(QWORD offset);
+	string extractString(QWORD offset) override;
 
-	string extractString2(QWORD offset);
+	string extractString2(QWORD offset) override;
 
-	bool extractToBuffer(QWORD offset, char* buffer, UINT size);
+	bool extractToBuffer(QWORD offset, char* buffer, UINT size) override;
 
-	DWORD getCurrentPID();
+	DWORD getCurrentPID() override;
 
-	QWORD getCurrentBaseAddress();
+	QWORD getCurrentBaseAddress() override;
 
-	HANDLE getCurrentHandle();
+	HANDLE getCurrentHandle() override;
 
-	float extractFloat(QWORD offset);
+	float extractFloat(QWORD offset) override;
 
-	BYTE extractBYTE(QWORD offset);
+	BYTE extractBYTE(QWORD offset) override;
 
-	UINT extractUINT(QWORD offset);
+	UINT extractUINT(QWORD offset) override;
 
 	bool AdjustPrivileges();
 
