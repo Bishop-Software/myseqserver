@@ -167,5 +167,5 @@ public:
 
 	string getCharName(MemReaderInterface* mr_intf);
 
-	QWORD current_offset(int type);
+	QWORD current_offset(int type) override;
 };

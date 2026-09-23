@@ -30,8 +30,6 @@
 
 #include "World.h"
 
-typedef uint64_t QWORD;
-
 #pragma pack(push, 1)
 
 struct netBuffer_t
