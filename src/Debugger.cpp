@@ -43,7 +43,7 @@ bool Debugger::setOffset(offset_types ot, QWORD value)
 	return true;
 }
 
-void Debugger::setOffset(offset_types ot, QWORD value, string ptrName)
+void Debugger::setOffset(offset_types ot, QWORD value, const string& ptrName)
 {
 	setOffset(ot, value);
 
@@ -229,7 +229,7 @@ void Debugger::displayCurrentOffsets()
 	cout << endl;
 }
 
-void Debugger::setOffset(bool primary, string args)
+void Debugger::setOffset(bool primary, const string& args)
 {
 	int parm1Int, parm2Int, i, OT_max;
 
@@ -558,7 +558,7 @@ void Debugger::scanForPtr(MemReaderInterface* mr_intf, QWORD pSearch, QWORD pSta
 	}
 }
 
-void Debugger::scanForString(MemReaderInterface* mr_intf, offset_types ot, QWORD size, string searchStr)
+void Debugger::scanForString(MemReaderInterface* mr_intf, offset_types ot, QWORD size, const string& searchStr)
 {
 	QWORD pMem, pStart, pDeepMem, pDeepMem2, nameOffset;
 
@@ -692,7 +692,7 @@ void Debugger::showProcesses(MemReaderInterface* mr_intf, string processName)
 	};
 }
 
-void Debugger::scanForFloatFromTarget(MemReaderInterface* mr_intf, string args)
+void Debugger::scanForFloatFromTarget(MemReaderInterface* mr_intf, const string& args)
 {
 	QWORD pStart;
 
@@ -701,7 +701,7 @@ void Debugger::scanForFloatFromTarget(MemReaderInterface* mr_intf, string args)
 	scanForFloat(mr_intf, args, pStart, false);
 }
 
-void Debugger::scanForFloatFromSelf(MemReaderInterface* mr_intf, string args)
+void Debugger::scanForFloatFromSelf(MemReaderInterface* mr_intf, const string& args)
 {
 	QWORD pStart;
 
@@ -710,7 +710,7 @@ void Debugger::scanForFloatFromSelf(MemReaderInterface* mr_intf, string args)
 	scanForFloat(mr_intf, args, pStart, false);
 }
 
-void Debugger::scanForUINTFromSelf(MemReaderInterface* mr_intf, QWORD size, string args)
+void Debugger::scanForUINTFromSelf(MemReaderInterface* mr_intf, QWORD size, const string& args)
 {
 	QWORD pStart;
 
@@ -719,7 +719,7 @@ void Debugger::scanForUINTFromSelf(MemReaderInterface* mr_intf, QWORD size, stri
 	scanForUINT(mr_intf, pStart, size, 4, args);
 }
 
-void Debugger::scanForBYTEFromTarget(MemReaderInterface* mr_intf, QWORD size, string args)
+void Debugger::scanForBYTEFromTarget(MemReaderInterface* mr_intf, QWORD size, const string& args)
 {
 	QWORD pStart;
 
@@ -728,7 +728,7 @@ void Debugger::scanForBYTEFromTarget(MemReaderInterface* mr_intf, QWORD size, st
 	scanForUINT(mr_intf, pStart, size, 2, args);
 }
 
-void Debugger::scanForBYTEFromSelf(MemReaderInterface* mr_intf, QWORD size, string args)
+void Debugger::scanForBYTEFromSelf(MemReaderInterface* mr_intf, QWORD size, const string& args)
 {
 	QWORD pStart;
 
@@ -737,7 +737,7 @@ void Debugger::scanForBYTEFromSelf(MemReaderInterface* mr_intf, QWORD size, stri
 	scanForUINT(mr_intf, pStart, size, 2, args);
 }
 
-void Debugger::scanForFloatFromAddress(MemReaderInterface* mr_intf, string args)
+void Debugger::scanForFloatFromAddress(MemReaderInterface* mr_intf, const string& args)
 {
 	vector<string> tokens;
 
@@ -746,7 +746,7 @@ void Debugger::scanForFloatFromAddress(MemReaderInterface* mr_intf, string args)
 	scanForFloat(mr_intf, args, (QWORD)strtoull(tokens[3].c_str(), NULL, 16), false);
 }
 
-void Debugger::scanForFloat(MemReaderInterface* mr_intf, string args, QWORD pStart, bool yankPstart)
+void Debugger::scanForFloat(MemReaderInterface* mr_intf, const string& args, QWORD pStart, bool yankPstart)
 {
 	const int INVALID = -100000;
 
@@ -905,7 +905,7 @@ void Debugger::scanForFloat(MemReaderInterface* mr_intf, string args, QWORD pSta
 	}
 }
 
-void Debugger::scanForWorldFromDate(MemReaderInterface* mr_intf, offset_types ot, QWORD size, string args)
+void Debugger::scanForWorldFromDate(MemReaderInterface* mr_intf, offset_types ot, QWORD size, const string& args)
 {
 	UINT yFind, yTemp;
 
@@ -999,7 +999,7 @@ void Debugger::scanForWorldFromDate(MemReaderInterface* mr_intf, offset_types ot
 	}
 }
 
-void Debugger::scanForUINT(MemReaderInterface* mr_intf, QWORD pStart, QWORD size, UINT length, string args)
+void Debugger::scanForUINT(MemReaderInterface* mr_intf, QWORD pStart, QWORD size, UINT length, const string& args)
 {
 	UINT Temp{};
 
@@ -1048,7 +1048,7 @@ void Debugger::scanForUINT(MemReaderInterface* mr_intf, QWORD pStart, QWORD size
 	}
 }
 
-int Debugger::tokenizeString(string input, vector<string>& tokens)
+int Debugger::tokenizeString(const string& input, vector<string>& tokens)
 {
 	string::size_type from = 0;
 
@@ -1068,7 +1068,7 @@ int Debugger::tokenizeString(string input, vector<string>& tokens)
 	return (int)tokens.size();
 }
 
-int Debugger::tokenizeDate(string input, vector<string>& tokens)
+int Debugger::tokenizeDate(const string& input, vector<string>& tokens)
 {
 	string::size_type from = 0;
 

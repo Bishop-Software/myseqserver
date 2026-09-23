@@ -63,9 +63,9 @@ private:
 
 	bool setOffset(offset_types ot, QWORD value);
 
-	void setOffset(offset_types ot, QWORD value, string ptrName);
+	void setOffset(offset_types ot, QWORD value, const string& ptrName);
 
-	void setOffset(bool primary, string userInput);
+	void setOffset(bool primary, const string& userInput);
 
 	void printMenu();
 
@@ -77,31 +77,32 @@ private:
 
 	void scanForPtr(MemReaderInterface* mr_intf, QWORD pSearch, QWORD pStart, QWORD size);
 
-	void scanForString(MemReaderInterface* mr_intf, offset_types ot, QWORD size, string searchStr);
+	void scanForString(MemReaderInterface* mr_intf, offset_types ot, QWORD size, const string& searchStr);
 
-	void scanForWorldFromDate(MemReaderInterface* mr_intf, offset_types ot, QWORD size, string args);
+	void scanForWorldFromDate(MemReaderInterface* mr_intf, offset_types ot, QWORD size, const string& args);
 
-	void scanForUINT(MemReaderInterface* mr_intf, QWORD pStart, QWORD size, UINT length, string args);
+	void scanForUINT(MemReaderInterface* mr_intf, QWORD pStart, QWORD size, UINT length, const string& args);
 
+	// Mutates its own copy of processName (substitutes a default when empty) - kept by-value.
 	void showProcesses(MemReaderInterface* mr_intf, string processName);
 
-	void scanForFloatFromTarget(MemReaderInterface* mr_intf, string args);
+	void scanForFloatFromTarget(MemReaderInterface* mr_intf, const string& args);
 
-	void scanForFloatFromSelf(MemReaderInterface* mr_intf, string args);
+	void scanForFloatFromSelf(MemReaderInterface* mr_intf, const string& args);
 
-	void scanForUINTFromSelf(MemReaderInterface* mr_intf, QWORD size, string args);
+	void scanForUINTFromSelf(MemReaderInterface* mr_intf, QWORD size, const string& args);
 
-	void scanForBYTEFromTarget(MemReaderInterface* mr_intf, QWORD size, string args);
+	void scanForBYTEFromTarget(MemReaderInterface* mr_intf, QWORD size, const string& args);
 
-	void scanForBYTEFromSelf(MemReaderInterface* mr_intf, QWORD size, string args);
+	void scanForBYTEFromSelf(MemReaderInterface* mr_intf, QWORD size, const string& args);
 
-	void scanForFloatFromAddress(MemReaderInterface* mr_intf, string args);
+	void scanForFloatFromAddress(MemReaderInterface* mr_intf, const string& args);
 
-	void scanForFloat(MemReaderInterface* mr_intf, string args, QWORD pStart, bool yankPstart);
+	void scanForFloat(MemReaderInterface* mr_intf, const string& args, QWORD pStart, bool yankPstart);
 
-	int tokenizeString(string input, vector<string>& tokens);
+	int tokenizeString(const string& input, vector<string>& tokens);
 
-	int tokenizeDate(string input, vector<string>& tokens);
+	int tokenizeDate(const string& input, vector<string>& tokens);
 
 public:
 	Debugger();

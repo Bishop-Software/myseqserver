@@ -119,7 +119,7 @@ public:
 
 	void init(IniReaderInterface* ir_intf);
 
-	void setOffset(offset_types ot, int value, string name);
+	void setOffset(offset_types ot, int value, const string& name);
 
 	void packItemBuffer(UINT flags);
 

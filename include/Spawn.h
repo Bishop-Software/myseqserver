@@ -224,11 +224,11 @@ public:
 	Spawn(const Spawn&) = delete;
 	Spawn& operator=(const Spawn&) = delete;
 
-	void setOffset(offset_types ot, UINT value, string ptrName);
+	void setOffset(offset_types ot, UINT value, const string& ptrName);
 
 	void init(IniReaderInterface* ir_intf);
 
-	void packNetBufferStrings(UINT flags, string firstname, string lastname);
+	void packNetBufferStrings(UINT flags, const string& firstname, const string& lastname);
 
 	void packNetBufferRaw(UINT flags, QWORD _this);
 

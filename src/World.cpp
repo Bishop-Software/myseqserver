@@ -80,7 +80,7 @@ void World::init(IniReaderInterface* ir_intf)
 	cout << "World: WorldInfo Offsets read in." << endl;
 }
 
-void World::setOffset(offset_types ot, int value, string name)
+void World::setOffset(offset_types ot, int value, const string& name)
 
 {
 

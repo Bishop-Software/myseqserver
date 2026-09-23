@@ -42,7 +42,7 @@ string IniReader::GetPatchDate()
 	return patchDate;
 }
 
-void IniReader::openFile(string _filename)
+void IniReader::openFile(const string& _filename)
 
 {
 
@@ -71,7 +71,7 @@ void IniReader::openFile(string _filename)
 	}
 }
 
-void IniReader::openConfigFile(string _filename)
+void IniReader::openConfigFile(const string& _filename)
 
 {
 
@@ -90,7 +90,7 @@ void IniReader::openConfigFile(string _filename)
 	cout << "ConfigIniFile: " << filename << endl;
 }
 
-string IniReader::readStringEntry(string section, string entry, bool config)
+string IniReader::readStringEntry(const string& section, const string& entry, bool config)
 
 {
 
@@ -110,7 +110,7 @@ string IniReader::readStringEntry(string section, string entry, bool config)
 	return rtn;
 }
 
-string IniReader::readEscapeStrings(string section, string entry)
+string IniReader::readEscapeStrings(const string& section, const string& entry)
 
 {
 
@@ -180,7 +180,7 @@ string IniReader::readEscapeStrings(string section, string entry)
 	return rtn;
 }
 
-QWORD IniReader::readIntegerEntry(string section, string entry, bool config)
+QWORD IniReader::readIntegerEntry(const string& section, const string& entry, bool config)
 
 {
 
@@ -204,7 +204,7 @@ QWORD IniReader::readIntegerEntry(string section, string entry, bool config)
 	return rtn;
 }
 
-bool IniReader::writeStringEntry(string section, string entry, string value, bool config)
+bool IniReader::writeStringEntry(const string& section, const string& entry, const string& value, bool config)
 
 {
 

@@ -42,7 +42,7 @@ Spawn::~Spawn()
 	delete[] rawBuffer;
 }
 
-void Spawn::setOffset(offset_types ot, UINT value, string ptrName)
+void Spawn::setOffset(offset_types ot, UINT value, const string& ptrName)
 
 {
 
@@ -122,7 +122,7 @@ void Spawn::init(IniReaderInterface* ir_intf)
 
    it easier to pack in the string information */
 
-void Spawn::packNetBufferStrings(UINT flags, string firstName, string lastName)
+void Spawn::packNetBufferStrings(UINT flags, const string& firstName, const string& lastName)
 
 {
 

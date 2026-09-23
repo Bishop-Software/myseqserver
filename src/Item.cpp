@@ -83,7 +83,7 @@ void Item::init(IniReaderInterface* ir_intf)
 	cout << "Item: GroundItem Offsets read in." << endl;
 }
 
-void Item::setOffset(offset_types ot, int value, string name)
+void Item::setOffset(offset_types ot, int value, const string& name)
 
 {
 
