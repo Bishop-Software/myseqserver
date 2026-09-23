@@ -68,8 +68,7 @@ class MemReader : public MemReaderInterface
 
 {
 
-private:
-	string originalFilename;
+string originalFilename;
 
 	// HANDLE 	currentEQProcessHandle;
 

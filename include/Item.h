@@ -24,8 +24,6 @@
 
 #include "IniReader.h"
 
-#pragma pack(push, 1)
-
 struct itemBuffer_t
 
 {
@@ -44,8 +42,6 @@ struct itemBuffer_t
 
 	UINT flags{};
 };
-
-#pragma pack(pop)
 
 class Item
 
@@ -78,11 +74,11 @@ public:
 	vector<itemBuffer_t> itemList;
 
 private:
-	string extractRawString(offset_types ot)
+	string extractRawString(const offset_types ot) const
 	{
-		UINT start = offsets[ot];
+		const UINT start = offsets[ot];
 
-		UINT maxLen = (start < largestOffset) ? (largestOffset - start) : 0;
+		const UINT maxLen = (start < largestOffset) ? (largestOffset - start) : 0;
 
 		const char* p = &rawBuffer[start];
 
@@ -94,33 +90,33 @@ private:
 		return string(p, len);
 	}
 
-	float extractRawFloat(offset_types ot)
+	float extractRawFloat(const offset_types ot) const
 	{
-		return *((float*)&rawBuffer[offsets[ot]]);
+		return *reinterpret_cast<float*>(&rawBuffer[offsets[ot]]);
 	}
 
-	DWORD extractRawDWord(offset_types ot)
+	DWORD extractRawDWord(const offset_types ot) const
 	{
-		return *((DWORD*)&rawBuffer[offsets[ot]]);
+		return *reinterpret_cast<DWORD*>(&rawBuffer[offsets[ot]]);
 	}
 
-	QWORD extractRawQWord(offset_types ot)
+	QWORD extractRawQWord(offset_types ot) const
 	{
-		return *((QWORD*)&rawBuffer[offsets[ot]]);
+		return *reinterpret_cast<QWORD*>(&rawBuffer[offsets[ot]]);
 	}
 
-	BYTE extractRawByte(offset_types ot)
+	BYTE extractRawByte(const offset_types ot) const
 	{
-		return *((BYTE*)&rawBuffer[offsets[ot]]);
+		return *reinterpret_cast<BYTE*>(&rawBuffer[offsets[ot]]);
 	}
 
-	int extractRawInt(offset_types ot)
+	int extractRawInt(const offset_types ot) const
 	{
-		return *((int*)&rawBuffer[offsets[ot]]);
+		return *reinterpret_cast<int*>(&rawBuffer[offsets[ot]]);
 	}
 
 public:
-	Item(void);
+	Item();
 	~Item();
 
 	Item(const Item&) = delete;
@@ -139,9 +135,9 @@ public:
 		itemList.push_back(tempItemBuffer);
 	}
 
-	UINT getNetBufferSize()
+	UINT getNetBufferSize() const
 	{
-		return (UINT)itemList.size();
+		return static_cast<UINT>(itemList.size());
 	}
 
 	itemBuffer_t* getNetBufferStart()
@@ -156,12 +152,12 @@ public:
 		itemList.clear();
 	}
 
-	QWORD extractNextPointer()
+	QWORD extractNextPointer() const
 	{
 		return extractRawQWord(OT_next);
 	}
 
-	QWORD extractPrevPointer()
+	QWORD extractPrevPointer() const
 	{
 		return extractRawQWord(OT_prev);
 	}

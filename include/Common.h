@@ -64,21 +64,19 @@ using namespace std;
 // currently-attached process's actual base address (ASLR means the two
 // rarely match). Kept as a single named constant so the ~20 call sites that
 // do this arithmetic can't drift out of sync with each other.
-static const unsigned long long kEQImageBase = 0x140000000ULL;
+static constexpr unsigned long long kEQImageBase = 0x140000000ULL;
 
 class Exception : public string
 
 {
 
-private:
-	int level;
+int level;
 
 public:
-	Exception(int l, string s) :
+	Exception(const int l, const string& s) :
 		string(s),
 		level(l)
 	{
-		;
 	}
 
 	int getLevel() const { return level; }
