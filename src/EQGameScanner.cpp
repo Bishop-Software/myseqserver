@@ -473,7 +473,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 			EQPrimaryOffsets::CharInfo = matchAddr;
 	}
 
-	outputStream << "SpawnInfo Offsets" << "\r\n";
+	outputStream << "[SpawnInfo Offsets]" << "\r\n";
 
 	for (const auto& entry : kSpawnInfoOffsets)
 	{
@@ -483,10 +483,24 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 		QWORD matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
 
-		outputStream << entry.displayName << ":" << "\r\n";
-		outputStream << "| Match Found @ " << ((matchAddr == NULL) ? "FALSE" : "TRUE") << "\r\n";
-		outputStream << "| Offset -> 0x" << std::hex << matchAddr << "\r\n";
-		outputStream << "\r\n";
+		outputStream << entry.iniSection << "=0x" << std::hex << matchAddr;
+
+		if (matchAddr == NULL)
+		{
+			outputStream << " #Not Found\r\n";
+			continue;
+		}
+
+		QWORD currentValue = (QWORD)ir_intf->readIntegerEntry("SpawnInfo Offsets", entry.displayName);
+
+		if (matchAddr == currentValue)
+		{
+			outputStream << " # Match\r\n";
+		}
+		else
+		{
+			outputStream << " # Does not match ini file.\r\n";
+		}
 	}
 
 	findResults << "\r\n";
