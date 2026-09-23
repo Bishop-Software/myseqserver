@@ -35,7 +35,7 @@ public:
 
 public:
 	bool executableExists() const;
-	void setExe(TCHAR* str);
+	void setExe(const TCHAR* str);
 	QWORD findEQPointerOffset(QWORD startAddress, std::size_t blockSize, const PBYTE byteMask, const PCHAR charMask);
 
 	// Locates a RIP-relative reference (e.g. `lea reg, [rip+disp32]` /

@@ -48,7 +48,7 @@ class IniReader : public IniReaderInterface
 public:
 	IniReader();
 
-	~IniReader(void);
+	~IniReader();
 
 private:
 	string filename;

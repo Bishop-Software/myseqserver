@@ -52,7 +52,7 @@ struct netBuffer_t
 	 * This is the only packet shape ever sent on the wire, so a world-clock
 	 * update (flags == NetworkServer::OPT_world, see packNetBufferWorld())
 	 * has nowhere else to go: it reuses these same 8 bytes, read back out
-	 * on the receiving end as EQ's in-game clock instead of spawn
+	 * on the receiving end as EverQuest's in-game clock instead of spawn
 	 * attributes. The union makes that reinterpretation explicit and
 	 * type-checked instead of relying on unrelated field names lining up
 	 * by coincidence - both members must keep this exact byte layout.
@@ -174,11 +174,11 @@ public:
 	// BYTE _class, type, level, hidden;
 
 private:
-	string extractRawString(offset_types ot)
+	string extractRawString(const offset_types ot) const
 	{
-		UINT start = offsets[ot];
+		const UINT start = offsets[ot];
 
-		UINT maxLen = (start < largestOffset) ? (largestOffset - start) : 0;
+		const UINT maxLen = (start < largestOffset) ? (largestOffset - start) : 0;
 
 		const char* p = &rawBuffer[start];
 
@@ -190,42 +190,42 @@ private:
 		return string(p, len);
 	}
 
-	float extractRawFloat(offset_types ot)
+	float extractRawFloat(const offset_types ot) const
 	{
-		return *((float*)&rawBuffer[offsets[ot]]);
+		return *reinterpret_cast<float*>(&rawBuffer[offsets[ot]]);
 	}
 
-	DWORD extractRawDWord(offset_types ot)
+	DWORD extractRawDWord(const offset_types ot) const
 	{
-		return *((DWORD*)&rawBuffer[offsets[ot]]);
+		return *reinterpret_cast<DWORD*>(&rawBuffer[offsets[ot]]);
 	}
 
-	QWORD extractRawQWord(offset_types ot)
+	QWORD extractRawQWord(const offset_types ot) const
 	{
-		return *((QWORD*)&rawBuffer[offsets[ot]]);
+		return *reinterpret_cast<QWORD*>(&rawBuffer[offsets[ot]]);
 	}
 
-	WORD extractRawWord(offset_types ot)
+	WORD extractRawWord(const offset_types ot) const
 	{
-		return *((WORD*)&rawBuffer[offsets[ot]]);
+		return *reinterpret_cast<WORD*>(&rawBuffer[offsets[ot]]);
 	}
 
-	int extractRawInt(offset_types ot)
+	int extractRawInt(const offset_types ot) const
 	{
-		return *((int*)&rawBuffer[offsets[ot]]);
+		return *reinterpret_cast<int*>(&rawBuffer[offsets[ot]]);
 	}
 
 public:
-	BYTE extractRawByte(offset_types ot)
+	BYTE extractRawByte(const offset_types ot) const
 	{
-		return *((BYTE*)&rawBuffer[offsets[ot]]);
+		return *reinterpret_cast<BYTE*>(&rawBuffer[offsets[ot]]);
 	}
 
 	UINT offsets[OT_max]{};
 
 	string ptrNames[OT_max];
 
-	Spawn(void);
+	Spawn();
 	~Spawn();
 
 	Spawn(const Spawn&) = delete;
@@ -248,9 +248,9 @@ public:
 		spawnList.push_back(tempNetBuffer);
 	}
 
-	UINT getNetBufferSize()
+	UINT getNetBufferSize() const
 	{
-		return (UINT)spawnList.size();
+		return static_cast<UINT>(spawnList.size());
 	}
 
 	netBuffer_t* getNetBufferStart()
@@ -265,12 +265,12 @@ public:
 		spawnList.clear();
 	}
 
-	QWORD extractNextPointer()
+	QWORD extractNextPointer() const
 	{
 		return extractRawQWord(OT_next);
 	}
 
-	QWORD extractPrevPointer()
+	QWORD extractPrevPointer() const
 	{
 		return extractRawQWord(OT_prev);
 	}

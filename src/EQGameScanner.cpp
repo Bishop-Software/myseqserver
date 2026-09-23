@@ -91,7 +91,7 @@ EQGameScanner::EQGameScanner()
 
 EQGameScanner::~EQGameScanner()
 = default;
-void EQGameScanner::setExe(TCHAR* str)
+void EQGameScanner::setExe(const TCHAR* str)
 {
 	executablePath = str;
 
@@ -136,7 +136,7 @@ QWORD EQGameScanner::findEQPointerOffset(QWORD startAddress, std::size_t blockSi
 	if (typelen < 1)
 		typelen = 4;
 
-	// Setup our temporary storage variables
+	// Set up our temporary storage variables
 	PBYTE buffer	= new BYTE[blockSize];
 	QWORD matchAddr = NULL;
 

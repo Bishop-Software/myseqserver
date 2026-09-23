@@ -32,7 +32,7 @@ IniReader::IniReader()
 	StartMinimized = false;
 }
 
-IniReader::~IniReader(void)
+IniReader::~IniReader()
 {
 }
 
