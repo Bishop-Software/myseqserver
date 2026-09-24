@@ -34,6 +34,12 @@ target_link_libraries(MySEQ.server PRIVATE wsock32 iphlpapi ws2_32 psapi kernel3
 target_include_directories(MySEQ.server PRIVATE include)
 target_precompile_headers(MySEQ.server PRIVATE include/stdafx.h)
 
+# Embed a manifest requesting themed (Common Controls v6) visual styles -
+# without it, buttons/edit boxes render with the classic Windows 95 look.
+if (MSVC)
+    target_link_options(MySEQ.server PRIVATE /MANIFEST:NO)
+endif()
+
 # MySEQ.server looks for its .ini files next to the executable / in the
 # working directory at runtime; copy them into the build output so a plain
 # "Run" in the IDE works without manual setup.

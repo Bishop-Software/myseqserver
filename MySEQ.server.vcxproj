@@ -73,6 +73,10 @@
       <LinkTimeCodeGeneration>
       </LinkTimeCodeGeneration>
       <OutputFile>$(OutDir)serverx64.exe</OutputFile>
+      <!-- The manifest is embedded as a raw RT_MANIFEST resource (id 1) in
+           MySEQ.server.rc instead, so the linker must not also generate one -
+           two manifest resources at id 1 is a duplicate-resource link error. -->
+      <GenerateManifest>false</GenerateManifest>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -98,11 +102,16 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>wsock32.lib;iphlpapi.lib;ws2_32.lib;psapi.lib;kernel32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-      <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
       <OutputFile>$(OutDir)serverx64.exe</OutputFile>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
+      <!-- requireAdministrator now comes from resources\MySEQ.server.admin.manifest,
+           embedded as a raw RT_MANIFEST resource (id 1) in MySEQ.server.rc under
+           #ifdef NDEBUG. GenerateManifest must stay off here too, otherwise the
+           linker's own auto-generated manifest collides with it (duplicate
+           resource at id 1). -->
+      <GenerateManifest>false</GenerateManifest>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
