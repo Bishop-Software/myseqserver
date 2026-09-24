@@ -91,6 +91,11 @@ private:
 
 	World worldParser;
 
+	// Backing text for the log pane (IDC_LOG_EDIT). Kept in memory and pushed
+	// via SetWindowText on each update rather than incremental EM_REPLACESEL
+	// inserts, which showed repaint/ghosting glitches on a plain EDIT control.
+	string logBuffer;
+
 public:
 	// Bit flags (in clientRequest) determining what data the client is requesting. See client's Structures.cs.
 
@@ -168,4 +173,10 @@ public:
 	string getCharName(MemReaderInterface* mr_intf);
 
 	QWORD current_offset(int type) override;
+
+	// Appends a timestamped line to the main dialog's log pane (IDC_LOG_EDIT),
+	// trimming the oldest lines once it grows past a couple hundred so the
+	// edit control's text length stays bounded. No-op if the dialog hasn't
+	// been created yet (h_MySEQServer is null).
+	void logEvent(const string& message);
 };
