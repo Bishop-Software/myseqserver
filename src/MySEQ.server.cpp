@@ -67,6 +67,10 @@ SERVICE_STATUS_HANDLE m_ServiceStatusHandle;
 HBRUSH g_hbrBackground = GetSysColorBrush(COLOR_MENU);
 bool bRunning;
 
+// Bold variant of the server dialog's font, used for its section headers
+// (created in ServerDialog's WM_INITDIALOG, freed on WM_DESTROY).
+HFONT g_hHeaderFont = NULL;
+
 // Global Variables:
 HINSTANCE hInst; // current instance
 bool running;
@@ -883,7 +887,32 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 	{
 		case WM_INITDIALOG:
 			SetMenu(hDlg, LoadMenu(hInst, MAKEINTRESOURCE(IDC_MYSEQSERVER)));
+
+			// Bold the section header labels that replaced the old GROUPBOX
+			// frames, so they still read as section breaks without a drawn box.
+			{
+				HFONT hDlgFont = (HFONT)SendMessage(hDlg, WM_GETFONT, 0, 0);
+				LOGFONT lf	   = {};
+				if (hDlgFont && GetObject(hDlgFont, sizeof(lf), &lf))
+				{
+					lf.lfWeight	 = FW_BOLD;
+					g_hHeaderFont = CreateFontIndirect(&lf);
+					if (g_hHeaderFont)
+					{
+						SendDlgItemMessage(hDlg, IDC_HEADER_SERVER, WM_SETFONT, (WPARAM)g_hHeaderFont, TRUE);
+						SendDlgItemMessage(hDlg, IDC_HEADER_OFFSETS, WM_SETFONT, (WPARAM)g_hHeaderFont, TRUE);
+						SendDlgItemMessage(hDlg, IDC_HEADER_SPAWNS, WM_SETFONT, (WPARAM)g_hHeaderFont, TRUE);
+					}
+				}
+			}
 			return (INT_PTR)TRUE;
+		case WM_DESTROY:
+			if (g_hHeaderFont)
+			{
+				DeleteObject(g_hHeaderFont);
+				g_hHeaderFont = NULL;
+			}
+			break;
 		case WM_CTLCOLORDLG:
 			return (INT_PTR)g_hbrBackground;
 		case WM_CTLCOLORSTATIC:
