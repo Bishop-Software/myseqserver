@@ -10,6 +10,7 @@
 #define IDC_MYSEQSERVER                 109
 #define IDD_EQOFFSETSFINDER             130
 #define IDD_DEBUG                       131
+#define IDD_ABOUTBOX                    132
 #define IDC_TEXT_STATUS                 1005
 #define IDC_TEXT_ZONE                   1007
 #define IDC_TEXT_PATCH                  1008
@@ -40,7 +41,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        132
+#define _APS_NEXT_RESOURCE_VALUE        133
 #define _APS_NEXT_COMMAND_VALUE         32771
 #define _APS_NEXT_CONTROL_VALUE         1036
 #define _APS_NEXT_SYMED_VALUE           110
