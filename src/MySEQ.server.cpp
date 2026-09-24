@@ -330,6 +330,12 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 
+	// Without this, Windows treats the process as DPI-unaware and bitmap-
+	// stretches the whole window on a scaled display, which renders small
+	// multiline text (e.g. the server dialog's log pane) as garbled/
+	// overlapping. Per-Monitor-V2 is the modern default (Windows 10 1703+).
+	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
 	MSG msg = {};
 	HACCEL hAccelTable;
 
@@ -881,6 +887,17 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 		case WM_CTLCOLORSTATIC:
 		{
 			HDC hdcStatic = (HDC)wParam;
+
+			// WM_CTLCOLORSTATIC also fires for read-only EDIT controls, not just
+			// static labels. The transparent-background handling below is meant
+			// for label text painted directly over the dialog background; on a
+			// scrollable multiline edit control it leaves newly-exposed lines
+			// un-erased when the control scrolls internally, so old and new text
+			// visually overlap. Let the log pane fall through to default
+			// (opaque) handling instead.
+			if (GetDlgCtrlID((HWND)lParam) == IDC_LOG_EDIT)
+				break;
+
 			switch (GetDlgCtrlID((HWND)lParam))
 			{
 				case IDC_TEXT_STATUS:

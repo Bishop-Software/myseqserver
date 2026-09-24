@@ -117,6 +117,7 @@ bool NetworkServer::openListenerSocket(bool service)
 	if (bind(sockListener, (struct sockaddr*)&sockAddr, sockAddrSize) == SOCKET_ERROR)
 	{
 		cout << "MySEQServer: Failed binding to port: " << port << endl;
+		logEvent("Failed binding to port " + std::to_string(port));
 		std::string str("Failed binding to port: ");
 		std::stringstream strm;
 		strm << dec << port;
@@ -245,6 +246,8 @@ bool NetworkServer::openListenerSocket(bool service)
 			// Set the best ip address in the gui
 			SetDlgItemText(h_MySEQServer, IDC_TEXT_PRIMARY, (LPCSTR)&active_address);
 		}
+
+		logEvent("Listening on " + std::string(active_address) + ":" + std::to_string(port));
 	}
 	return true;
 }
@@ -269,6 +272,7 @@ void NetworkServer::openClientSocket()
 	}
 
 	cout << "MySEQServer: New connection from: " << inet_ntoa(psockAddrIn->sin_addr) << endl;
+	logEvent("New connection from " + std::string(inet_ntoa(psockAddrIn->sin_addr)));
 }
 
 void NetworkServer::closeClientSocket()
@@ -277,6 +281,7 @@ void NetworkServer::closeClientSocket()
 	{
 		cout << "MySEQServer: Closing client socket" << endl
 			 << endl;
+		logEvent("Closing client socket");
 		closesocket(sockClient);
 		sockClient = INVALID_SOCKET;
 	}
@@ -286,8 +291,57 @@ void NetworkServer::closeListenerSocket()
 {
 	cout << "MySEQServer: Closing listener socket" << endl
 		 << endl;
+	logEvent("Closing listener socket");
 	closesocket(sockListener);
 	sockListener = INVALID_SOCKET;
+}
+
+void NetworkServer::logEvent(const string& message)
+{
+	if (!h_MySEQServer)
+		return;
+
+	HWND hEdit = GetDlgItem(h_MySEQServer, IDC_LOG_EDIT);
+	if (!hEdit)
+		return;
+
+	SYSTEMTIME st;
+	GetLocalTime(&st);
+	char buffer[512];
+	sprintf_s(buffer, "[%02d:%02d:%02d] %s\r\n", st.wHour, st.wMinute, st.wSecond, message.c_str());
+
+	logBuffer += buffer;
+
+	// Trim the oldest 50 lines once we hit 200, so the buffer (and the edit
+	// control's text length) stays bounded during a long-running session.
+	int lineCount = 0;
+	for (char c : logBuffer)
+		if (c == '\n')
+			lineCount++;
+
+	if (lineCount > 200)
+	{
+		size_t cutAt = 0;
+		for (int i = 0; i < 50; i++)
+		{
+			size_t nl = logBuffer.find('\n', cutAt);
+			if (nl == string::npos)
+				break;
+			cutAt = nl + 1;
+		}
+		logBuffer.erase(0, cutAt);
+	}
+
+	// Rewrite the whole control on each update rather than doing an
+	// incremental EM_REPLACESEL insert - the incremental approach showed
+	// repaint/ghosting glitches (old and new lines visually overlapping) on
+	// a plain EDIT control, while a full SetWindowText always repaints
+	// cleanly. The log is small (<=200 lines), so the extra cost is trivial.
+	SetWindowText(hEdit, logBuffer.c_str());
+
+	int textLen = GetWindowTextLength(hEdit);
+	SendMessage(hEdit, EM_SETSEL, (WPARAM)textLen, (LPARAM)textLen);
+	SendMessage(hEdit, EM_SCROLLCARET, 0, 0);
 }
 bool NetworkServer::requestContains(inc_packet_types pt)
 {
@@ -358,6 +412,7 @@ void NetworkServer::init(IniReaderInterface* ir_intf)
 	}
 
 	cout << "MySEQServer: Port value and memory offsets read in." << endl;
+	logEvent("Port value and memory offsets read in");
 }
 
 void NetworkServer::enterReceiveLoop(MemReaderInterface* mr_intf)
@@ -403,6 +458,11 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 	{
 		DWORD originalPID = mr_intf->getCurrentPID();
 		cout << "MySEQServer: Setting process to 0x" << hex << clientRequest << endl;
+		{
+			std::stringstream strm;
+			strm << "Setting process to 0x" << hex << clientRequest;
+			logEvent(strm.str());
+		}
 		mr_intf->openFirstProcess("eqgame", false);
 		while (1)
 		{
