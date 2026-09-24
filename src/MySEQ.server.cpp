@@ -22,7 +22,7 @@
 
 #include "MySEQ.server.h"
 
-#include <WinSvc.h>
+#include <winsvc.h>
 #include "time.h"
 #include <ShellAPI.h>
 #include <process.h>
@@ -100,6 +100,7 @@ BOOL InitInstance(HINSTANCE, int);
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK ServerDialog(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK OffsetDialog(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK AboutDialog(HWND, UINT, WPARAM, LPARAM);
 BOOL WINAPI CtrlHandler(DWORD dwCtrlType);
 
 void DoDebugLoop(void*);
@@ -881,6 +882,7 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 	switch (message)
 	{
 		case WM_INITDIALOG:
+			SetMenu(hDlg, LoadMenu(hInst, MAKEINTRESOURCE(IDC_MYSEQSERVER)));
 			return (INT_PTR)TRUE;
 		case WM_CTLCOLORDLG:
 			return (INT_PTR)g_hbrBackground;
@@ -917,12 +919,16 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 		}
 		break;
 		case WM_COMMAND:
-			if (LOWORD(wParam) == IDCLOSE || LOWORD(wParam) == IDCANCEL)
+			if (LOWORD(wParam) == IDCLOSE || LOWORD(wParam) == IDCANCEL || LOWORD(wParam) == IDM_EXIT)
 			{
 				EndDialog(hDlg, LOWORD(wParam));
 				running = false;
 				FreeConsole();
 				return (INT_PTR)FALSE;
+			}
+			if (LOWORD(wParam) == IDM_ABOUT)
+			{
+				DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hDlg, AboutDialog);
 			}
 			if (LOWORD(wParam) == IDC_BUTTON1)
 			{
@@ -1074,6 +1080,24 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 			}
 		} // end of case WM_TRAYICON:
 		break;
+	}
+	return (INT_PTR)FALSE;
+}
+
+// Message handler for the About dialog, shown from the server dialog's Help menu.
+INT_PTR CALLBACK AboutDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM)
+{
+	switch (message)
+	{
+		case WM_INITDIALOG:
+			return (INT_PTR)TRUE;
+		case WM_COMMAND:
+			if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+			{
+				EndDialog(hDlg, LOWORD(wParam));
+				return (INT_PTR)TRUE;
+			}
+			break;
 	}
 	return (INT_PTR)FALSE;
 }
