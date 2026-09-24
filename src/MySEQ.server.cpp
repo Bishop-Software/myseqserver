@@ -902,6 +902,7 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 						SendDlgItemMessage(hDlg, IDC_HEADER_SERVER, WM_SETFONT, (WPARAM)g_hHeaderFont, TRUE);
 						SendDlgItemMessage(hDlg, IDC_HEADER_OFFSETS, WM_SETFONT, (WPARAM)g_hHeaderFont, TRUE);
 						SendDlgItemMessage(hDlg, IDC_HEADER_SPAWNS, WM_SETFONT, (WPARAM)g_hHeaderFont, TRUE);
+						SendDlgItemMessage(hDlg, IDC_HEADER_LOG, WM_SETFONT, (WPARAM)g_hHeaderFont, TRUE);
 					}
 				}
 			}

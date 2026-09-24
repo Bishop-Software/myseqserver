@@ -37,6 +37,7 @@
 #define IDC_HEADER_SERVER               1036
 #define IDC_HEADER_OFFSETS              1037
 #define IDC_HEADER_SPAWNS               1038
+#define IDC_HEADER_LOG                  1039
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -46,7 +47,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        133
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1039
+#define _APS_NEXT_CONTROL_VALUE         1040
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif
