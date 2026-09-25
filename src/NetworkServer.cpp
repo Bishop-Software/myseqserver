@@ -48,23 +48,27 @@ NetworkServer::~NetworkServer(void)
 
 void NetworkServer::listIPAddresses()
 {
-	TCHAR mybuffer[1024];
-	mybuffer[0] = _T('\0');
-	hostent* localHost;
-	int j	  = 0;
-	localHost = gethostbyname("localhost");
+	// Logged to the dialog's log pane rather than a blocking MessageBox, so
+	// listing addresses doesn't stall the UI and the text can be selected/
+	// copied like any other log line.
+	vector<string> seen;
+	int count = 0;
+
+	auto logIfNew = [&](const string& addr)
+	{
+		if (count > 10 || find(seen.begin(), seen.end(), addr) != seen.end())
+			return;
+		seen.push_back(addr);
+		count++;
+		logEvent("Local IP address: " + addr);
+	};
+
+	hostent* localHost = gethostbyname("localhost");
 	for (int i = 0; localHost && localHost->h_addr_list[i] != 0; ++i)
 	{
 		struct in_addr addr;
 		memcpy(&addr, localHost->h_addr_list[i], sizeof(struct in_addr));
-		// assign our local host to the designated ip address
-		if (mybuffer[0] == _T('\0'))
-			sprintf_s(mybuffer, "%s", inet_ntoa(addr));
-		else
-			strcat_s(mybuffer, inet_ntoa(addr));
-		j = j + 1;
-		if (j > 10)
-			break;
+		logIfNew(inet_ntoa(addr));
 	}
 
 	localHost = gethostbyname("");
@@ -72,20 +76,8 @@ void NetworkServer::listIPAddresses()
 	{
 		struct in_addr addr;
 		memcpy(&addr, localHost->h_addr_list[i], sizeof(struct in_addr));
-		if (mybuffer[0] == _T('\0'))
-		{
-			sprintf_s(mybuffer, "%s", inet_ntoa(addr));
-		}
-		else
-		{
-			strcat_s(mybuffer, "\r\n");
-			strcat_s(mybuffer, inet_ntoa(addr));
-		}
-		j = j + 1;
-		if (j > 10)
-			break;
+		logIfNew(inet_ntoa(addr));
 	}
-	MessageBox(h_MySEQServer ? h_MySEQServer : NULL, (LPCSTR)&mybuffer, "MySEQ Open Server: Local IP Addresses", MB_OK | MB_TOPMOST | MB_ICONINFORMATION);
 }
 
 bool NetworkServer::openListenerSocket(bool service)
