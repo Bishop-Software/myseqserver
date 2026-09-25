@@ -3,7 +3,7 @@
   <assemblyIdentity
     type="win32"
     name="BishopSoftware.MySEQ.Server"
-    version="2.5.1.0"
+    version="3.0.0.0"
     processorArchitecture="amd64"
   />
 

@@ -119,9 +119,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="resources\MySEQ.server.ico" />
-    <None Include="resources\ServerReleaseNotes.html">
-      <SubType>Designer</SubType>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Common.h" />
