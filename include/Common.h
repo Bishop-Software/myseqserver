@@ -86,3 +86,66 @@ public:
 
 	int getLevel() const { return level; }
 };
+
+// Minimal RAII owner for a Win32 HANDLE: closes it via CloseHandle when the
+// guard goes out of scope, on every exit path, without needing a matching
+// CloseHandle at each return statement. `invalidValue` lets callers specify
+// the sentinel their API uses for "no handle" (NULL for most handles,
+// INVALID_HANDLE_VALUE for CreateToolhelp32Snapshot/CreateFile) so valid()
+// and the destructor never try to close the sentinel itself. Move-only,
+// scope-bound guard -- not meant to be stored long-term; call release() to
+// hand ownership to a caller/member that will manage its own lifetime.
+class ScopedHandle
+{
+public:
+	explicit ScopedHandle(HANDLE h = nullptr, HANDLE invalidValue = nullptr) :
+		handle(h),
+		invalid(invalidValue)
+	{
+	}
+
+	~ScopedHandle() { close(); }
+
+	ScopedHandle(const ScopedHandle&) = delete;
+	ScopedHandle& operator=(const ScopedHandle&) = delete;
+
+	ScopedHandle(ScopedHandle&& other) noexcept :
+		handle(other.handle),
+		invalid(other.invalid)
+	{
+		other.handle = other.invalid;
+	}
+
+	ScopedHandle& operator=(ScopedHandle&& other) noexcept
+	{
+		if (this != &other)
+		{
+			close();
+			handle		 = other.handle;
+			invalid		 = other.invalid;
+			other.handle = other.invalid;
+		}
+		return *this;
+	}
+
+	bool valid() const { return handle != invalid; }
+	HANDLE get() const { return handle; }
+
+	// Hands ownership to the caller; the destructor will no longer close it.
+	HANDLE release()
+	{
+		HANDLE h = handle;
+		handle	 = invalid;
+		return h;
+	}
+
+private:
+	void close()
+	{
+		if (valid())
+			CloseHandle(handle);
+	}
+
+	HANDLE handle;
+	HANDLE invalid;
+};
