@@ -161,6 +161,7 @@ void WINAPI ServiceMain(DWORD, LPTSTR*)
 
 		iniReader.openFile(iniFile);
 		iniReader.openConfigFile(configIniFile);
+		iniReader.openOffsetsFile(offsetsIniFile);
 
 		netServer.init(&iniReader);
 
@@ -178,6 +179,8 @@ void WINAPI ServiceMain(DWORD, LPTSTR*)
 		iniReader.openFile(iniFile);
 
 		iniReader.openConfigFile(configIniFile);
+
+		iniReader.openOffsetsFile(offsetsIniFile);
 
 		netServer.init(&iniReader);
 
@@ -457,6 +460,8 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	iniReader.openFile(iniFile);
 
 	iniReader.openConfigFile(configIniFile);
+
+	iniReader.openOffsetsFile(offsetsIniFile);
 
 	netServer.hwnd = h_Main;
 
@@ -1007,6 +1012,7 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 				{
 					iniReader.openFile(iniFile);
 					iniReader.openConfigFile(configIniFile);
+					iniReader.openOffsetsFile(offsetsIniFile);
 					netServer.init(&iniReader);
 
 					// close and reopen listener socket, in case port changed
@@ -1348,6 +1354,8 @@ void ReadArgs(int argc, char* argv[])
 		}
 		GetCurrentDirectory(_MAX_PATH, configIniFile);
 		strcat_s(configIniFile, "\\config.ini");
+		GetCurrentDirectory(_MAX_PATH, offsetsIniFile);
+		strcat_s(offsetsIniFile, "\\offsets.ini");
 	}
 	else if (arg == "-k")
 	{
@@ -1359,9 +1367,11 @@ void ReadArgs(int argc, char* argv[])
 		mypath					= string(AppPath).substr(0, index);
 		string(mypath)._Copy_s(iniFile, MAX_PATH, index, 0);
 		string(mypath)._Copy_s(configIniFile, _MAX_PATH, index, 0);
+		string(mypath)._Copy_s(offsetsIniFile, _MAX_PATH, index, 0);
 
 		strcat_s(iniFile, "\\myseqserver.ini");
 		strcat_s(configIniFile, "\\config.ini");
+		strcat_s(offsetsIniFile, "\\offsets.ini");
 
 #ifdef _DEBUG_CONSOLE
 
@@ -1390,9 +1400,11 @@ void ReadArgs(int argc, char* argv[])
 		mypath					= string(AppPath).substr(0, index);
 		string(mypath)._Copy_s(iniFile, MAX_PATH, index, 0);
 		string(mypath)._Copy_s(configIniFile, _MAX_PATH, index, 0);
+		string(mypath)._Copy_s(offsetsIniFile, _MAX_PATH, index, 0);
 
 		strcat_s(iniFile, "\\myseqserver.ini");
 		strcat_s(configIniFile, "\\config.ini");
+		strcat_s(offsetsIniFile, "\\offsets.ini");
 	}
 }
 

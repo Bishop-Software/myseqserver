@@ -31,6 +31,8 @@ public:
 
 	virtual void openConfigFile(const string& filename) = 0;
 
+	virtual void openOffsetsFile(const string& filename) = 0;
+
 	virtual string readStringEntry(const string& section, const string& entry, bool config = false) = 0;
 
 	virtual QWORD readIntegerEntry(const string& section, const string& entry, bool config = false) = 0;
@@ -53,6 +55,8 @@ private:
 
 	string configfilename;
 
+	string offsetsfilename;
+
 	_TCHAR buffer[255]{};
 
 	bool StartMinimized;
@@ -61,6 +65,8 @@ public:
 	void openFile(const string& filename) override;
 
 	void openConfigFile(const string& filename) override;
+
+	void openOffsetsFile(const string& filename) override;
 
 	string readStringEntry(const string& section, const string& entry, bool config = false) override;
 

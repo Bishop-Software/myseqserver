@@ -276,7 +276,7 @@ void TestReadEscapeStrings_DecodesRealPatternShape(IniReader& ini)
 		"Pattern=\\x01\\x48\\x89\\x1D\\x00\\x05\\x00\\x00\\x48\\x8B\\x01\\xFF\r\n"
 		"Mask=xxxxttttxxxx\r\n");
 
-	ini.openConfigFile(path);
+	ini.openOffsetsFile(path);
 	std::string decoded = ini.readEscapeStrings("TestZoneAddr", "Pattern");
 	std::string mask	 = ini.readStringEntry("TestZoneAddr", "Mask", true);
 
@@ -300,7 +300,7 @@ void TestReadEscapeStrings_MalformedEscapeIsSkippedNotFatal(IniReader& ini)
 		"[TestMalformed]\r\n"
 		"Pattern=\\xAB\\xCd\\x9F\\qXY\\x00\r\n");
 
-	ini.openConfigFile(path);
+	ini.openOffsetsFile(path);
 	std::string decoded = ini.readEscapeStrings("TestMalformed", "Pattern");
 
 	const BYTE expected[] = { 0xAB, 0xCD, 0x9F, 0x00 };
