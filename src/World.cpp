@@ -33,11 +33,6 @@ World::World(void)
 	largestOffset = 0;
 }
 
-World::~World()
-{
-	delete[] rawBuffer;
-}
-
 void World::init(IniReaderInterface* ir_intf)
 
 {
@@ -74,8 +69,7 @@ void World::init(IniReaderInterface* ir_intf)
 
 	// We use this to store the raw data from the EQ process
 
-	delete[] rawBuffer;
-	rawBuffer = new char[largestOffset];
+	rawBuffer.assign(largestOffset, 0);
 
 	cout << "World: WorldInfo Offsets read in." << endl;
 }

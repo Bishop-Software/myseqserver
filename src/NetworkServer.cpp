@@ -530,7 +530,7 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 
 			if (pTemp)
 			{
-				if (tempMemReader.extractToBuffer(pTemp, spawnParser.rawBuffer, spawnParser.largestOffset))
+				if (tempMemReader.extractToBuffer(pTemp, spawnParser.rawBuffer.data(), spawnParser.largestOffset))
 				{
 					// For this type of packet, we only use the gamer name and the PID
 					spawnParser.packNetBufferRaw(OPT_process, tempMemReader.getCurrentPID());
@@ -599,7 +599,7 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 			cout << "MySEQServer: pSelf is 0x" << hex << pTemp << endl;
 
 		if (pTemp)
-			if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer, spawnParser.largestOffset))
+			if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer.data(), spawnParser.largestOffset))
 			{
 				spawnParser.packNetBufferRaw(OPT_self, pTemp);
 				spawnParser.pushNetBuffer();
@@ -620,12 +620,12 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 			grab the whole thing. */
 		for (maxLoop = 0; maxLoop < 2000; maxLoop++)
 		{
-			if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer, spawnParser.largestOffset))
+			if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer.data(), spawnParser.largestOffset))
 			{
 				if (spawnParser.extractPrevPointer())
 				{
 					pTemp = spawnParser.extractPrevPointer();
-					cout << "pTemp extract " << pTemp << " raw " << spawnParser.rawBuffer << " largest offset " << spawnParser.largestOffset << endl;
+					cout << "pTemp extract " << pTemp << " raw " << spawnParser.rawBuffer.data() << " largest offset " << spawnParser.largestOffset << endl;
 				}
 				else
 					break;
@@ -646,7 +646,7 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 
 		while (pTemp)
 		{
-			if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer, spawnParser.largestOffset))
+			if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer.data(), spawnParser.largestOffset))
 			{
 				spawnParser.packNetBufferRaw(OPT_spawns, pTemp);
 				spawnParser.pushNetBuffer();
@@ -669,7 +669,7 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 			// Get us to the top of the list
 			for (maxLoop = 0; maxLoop < 2000; maxLoop++)
 			{
-				if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer, spawnParser.largestOffset))
+				if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer.data(), spawnParser.largestOffset))
 				{
 					if (spawnParser.extractPrevPointer())
 						pTemp = spawnParser.extractPrevPointer();
@@ -681,7 +681,7 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 			int pcNum = 0, npcNum = 0, corpseNum = 0, tallyCount = 0;
 			while (pTemp)
 			{
-				if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer, spawnParser.largestOffset))
+				if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer.data(), spawnParser.largestOffset))
 				{
 					result = spawnParser.extractRawByte(spawnParser.OT_type);
 					switch (result)
@@ -729,7 +729,7 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 
 		if (pTemp)
 		{
-			if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer, spawnParser.largestOffset))
+			if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer.data(), spawnParser.largestOffset))
 			{
 				spawnParser.packNetBufferRaw(OPT_target, pTemp);
 				spawnParser.pushNetBuffer();
@@ -778,7 +778,7 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 
 		while (pTemp)
 		{
-			if (mr_intf->extractToBuffer(pTemp, itemParser.rawBuffer, itemParser.largestOffset))
+			if (mr_intf->extractToBuffer(pTemp, itemParser.rawBuffer.data(), itemParser.largestOffset))
 			{
 				itemParser.packItemBuffer(OPT_ground);
 				spawnParser.packNetBufferFrom(itemParser);
@@ -816,7 +816,7 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 			cout << "MySEQServer: pWorldInfo is 0x" << hex << pTemp << endl;
 
 		if (pTemp)
-			if (mr_intf->extractToBuffer(pTemp, worldParser.rawBuffer, worldParser.largestOffset))
+			if (mr_intf->extractToBuffer(pTemp, worldParser.rawBuffer.data(), worldParser.largestOffset))
 			{
 				worldParser.packWorldBuffer(OPT_world);
 				spawnParser.packNetBufferWorld(worldParser);
