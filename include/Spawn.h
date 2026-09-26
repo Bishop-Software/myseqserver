@@ -125,7 +125,10 @@ public:
 
 	UINT largestOffset;
 
-	char* rawBuffer{};
+	// mutable: the const extractRaw* accessors below index into this buffer
+	// via reinterpret_cast, matching the non-const pointee semantics the
+	// previous raw char* member had even when accessed from a const method.
+	mutable vector<char> rawBuffer;
 
 	/*
 
@@ -219,7 +222,6 @@ public:
 	string ptrNames[OT_max];
 
 	Spawn();
-	~Spawn();
 
 	Spawn(const Spawn&) = delete;
 	Spawn& operator=(const Spawn&) = delete;

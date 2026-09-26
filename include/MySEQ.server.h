@@ -47,6 +47,7 @@ IniReader iniReader;
 
 char iniFile[_MAX_PATH + 1];
 char configIniFile[_MAX_PATH + 1];
+char offsetsIniFile[_MAX_PATH + 1];
 
 int server_status;
 int check_delay;

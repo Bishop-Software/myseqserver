@@ -396,7 +396,7 @@ void Debugger::processSpawn(MemReaderInterface* mr_intf, offset_types ot)
 
 	if (pMem)
 	{
-		if (!(mr_intf->extractToBuffer(pMem, spawnParser.rawBuffer, spawnParser.largestOffset)))
+		if (!(mr_intf->extractToBuffer(pMem, spawnParser.rawBuffer.data(), spawnParser.largestOffset)))
 		{
 			cout << " Failed to read memory at address 0x" << hex << (pMem + kEQImageBase - mr_intf->getCurrentBaseAddress()) << endl;
 
@@ -463,7 +463,7 @@ void Debugger::walkSpawnList(MemReaderInterface* mr_intf, offset_types ot, bool 
 	// First try and get to the initial spawn entity
 	if (pMem)
 	{
-		if (!(mr_intf->extractToBuffer(pMem, spawnParser.rawBuffer, spawnParser.largestOffset)))
+		if (!(mr_intf->extractToBuffer(pMem, spawnParser.rawBuffer.data(), spawnParser.largestOffset)))
 		{
 			cout << " Failed to read memory at address 0x" << hex << (pMem + kEQImageBase - mr_intf->getCurrentBaseAddress()) << endl;
 
@@ -513,7 +513,7 @@ void Debugger::walkSpawnList(MemReaderInterface* mr_intf, offset_types ot, bool 
 			else
 				pMem = pNext;
 
-			if (!(mr_intf->extractToBuffer(pMem, spawnParser.rawBuffer, spawnParser.largestOffset)))
+			if (!(mr_intf->extractToBuffer(pMem, spawnParser.rawBuffer.data(), spawnParser.largestOffset)))
 			{
 				if (spawnCount == 0)
 					cout << " Failed to read memory at address 0x" << hex << pMem << endl;

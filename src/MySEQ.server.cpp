@@ -67,6 +67,10 @@ SERVICE_STATUS_HANDLE m_ServiceStatusHandle;
 HBRUSH g_hbrBackground = GetSysColorBrush(COLOR_MENU);
 bool bRunning;
 
+// Bold variant of the server dialog's font, used for its section headers
+// (created in ServerDialog's WM_INITDIALOG, freed on WM_DESTROY).
+HFONT g_hHeaderFont = NULL;
+
 // Global Variables:
 HINSTANCE hInst; // current instance
 bool running;
@@ -157,6 +161,7 @@ void WINAPI ServiceMain(DWORD, LPTSTR*)
 
 		iniReader.openFile(iniFile);
 		iniReader.openConfigFile(configIniFile);
+		iniReader.openOffsetsFile(offsetsIniFile);
 
 		netServer.init(&iniReader);
 
@@ -174,6 +179,8 @@ void WINAPI ServiceMain(DWORD, LPTSTR*)
 		iniReader.openFile(iniFile);
 
 		iniReader.openConfigFile(configIniFile);
+
+		iniReader.openOffsetsFile(offsetsIniFile);
 
 		netServer.init(&iniReader);
 
@@ -439,7 +446,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	else if (!services)
 	{
 		cout << "========================" << endl
-			 << "  MySEQServer v2.4.1.0  " << endl
+			 << "  MySEQServer v3.0.0.0  " << endl
 			 << "========================" << endl
 			 << endl
 			 << "This software is covered under the GNU Public License (GPL)" << endl
@@ -453,6 +460,8 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	iniReader.openFile(iniFile);
 
 	iniReader.openConfigFile(configIniFile);
+
+	iniReader.openOffsetsFile(offsetsIniFile);
 
 	netServer.hwnd = h_Main;
 
@@ -883,7 +892,33 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 	{
 		case WM_INITDIALOG:
 			SetMenu(hDlg, LoadMenu(hInst, MAKEINTRESOURCE(IDC_MYSEQSERVER)));
+
+			// Bold the section header labels that replaced the old GROUPBOX
+			// frames, so they still read as section breaks without a drawn box.
+			{
+				HFONT hDlgFont = (HFONT)SendMessage(hDlg, WM_GETFONT, 0, 0);
+				LOGFONT lf	   = {};
+				if (hDlgFont && GetObject(hDlgFont, sizeof(lf), &lf))
+				{
+					lf.lfWeight	 = FW_BOLD;
+					g_hHeaderFont = CreateFontIndirect(&lf);
+					if (g_hHeaderFont)
+					{
+						SendDlgItemMessage(hDlg, IDC_HEADER_SERVER, WM_SETFONT, (WPARAM)g_hHeaderFont, TRUE);
+						SendDlgItemMessage(hDlg, IDC_HEADER_OFFSETS, WM_SETFONT, (WPARAM)g_hHeaderFont, TRUE);
+						SendDlgItemMessage(hDlg, IDC_HEADER_SPAWNS, WM_SETFONT, (WPARAM)g_hHeaderFont, TRUE);
+						SendDlgItemMessage(hDlg, IDC_HEADER_LOG, WM_SETFONT, (WPARAM)g_hHeaderFont, TRUE);
+					}
+				}
+			}
 			return (INT_PTR)TRUE;
+		case WM_DESTROY:
+			if (g_hHeaderFont)
+			{
+				DeleteObject(g_hHeaderFont);
+				g_hHeaderFont = NULL;
+			}
+			break;
 		case WM_CTLCOLORDLG:
 			return (INT_PTR)g_hbrBackground;
 		case WM_CTLCOLORSTATIC:
@@ -973,18 +1008,32 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 			if (LOWORD(wParam) == IDC_BUTTON2)
 			{
 				// reload offsets
-				iniReader.openFile(iniFile);
-				iniReader.openConfigFile(configIniFile);
-				netServer.init(&iniReader);
+				try
+				{
+					iniReader.openFile(iniFile);
+					iniReader.openConfigFile(configIniFile);
+					iniReader.openOffsetsFile(offsetsIniFile);
+					netServer.init(&iniReader);
 
-				// close and reopen listener socket, in case port changed
-				netServer.closeListenerSocket();
-				running = netServer.openListenerSocket(false);
+					// close and reopen listener socket, in case port changed
+					netServer.closeListenerSocket();
+					running = netServer.openListenerSocket(false);
 
-				// update patch date in GUI
-				LPCSTR patchdate;
-				patchdate = iniReader.patchDate.c_str();
-				SetDlgItemText(h_MySEQServer, IDC_TEXT_PATCH, patchdate);
+					// update patch date in GUI
+					LPCSTR patchdate;
+					patchdate = iniReader.patchDate.c_str();
+					SetDlgItemText(h_MySEQServer, IDC_TEXT_PATCH, patchdate);
+
+					if (running)
+						netServer.logEvent("Reload: offsets and config reloaded successfully");
+					else
+						netServer.logEvent("Reload: config reloaded, but the listener failed to reopen (check the port)");
+				}
+				catch (Exception& ex)
+				{
+					netServer.logEvent("Reload failed: " + string(ex));
+					running = false;
+				}
 			}
 			if (LOWORD(wParam) == IDC_BUTTON3)
 			{
@@ -999,18 +1048,29 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 			break;
 
 		case WM_SYSCOMMAND:
-			switch (wParam)
+			switch (wParam & 0xFFF0)
 			{
 				case SC_MINIMIZE:
-				{
-					// do stuff
 					Minimize();
 					return (INT_PTR)TRUE;
-					break;
-				}
+				case SC_CLOSE:
+					// The titlebar X, Alt+F4, and the system menu's Close all
+					// route here. Minimize to tray instead of letting the
+					// default handling destroy the window -- otherwise the
+					// server keeps running as a windowless, tray-icon-less
+					// background process with no way to bring the UI back.
+					Minimize();
+					return (INT_PTR)TRUE;
 				default:
 					break;
 			}
+			break;
+
+		case WM_CLOSE:
+			// Belt-and-suspenders for any WM_CLOSE that arrives without going
+			// through WM_SYSCOMMAND/SC_CLOSE above.
+			Minimize();
+			return (INT_PTR)TRUE;
 
 		case WM_TRAYICON:
 		{
@@ -1294,6 +1354,8 @@ void ReadArgs(int argc, char* argv[])
 		}
 		GetCurrentDirectory(_MAX_PATH, configIniFile);
 		strcat_s(configIniFile, "\\config.ini");
+		GetCurrentDirectory(_MAX_PATH, offsetsIniFile);
+		strcat_s(offsetsIniFile, "\\offsets.ini");
 	}
 	else if (arg == "-k")
 	{
@@ -1305,9 +1367,11 @@ void ReadArgs(int argc, char* argv[])
 		mypath					= string(AppPath).substr(0, index);
 		string(mypath)._Copy_s(iniFile, MAX_PATH, index, 0);
 		string(mypath)._Copy_s(configIniFile, _MAX_PATH, index, 0);
+		string(mypath)._Copy_s(offsetsIniFile, _MAX_PATH, index, 0);
 
 		strcat_s(iniFile, "\\myseqserver.ini");
 		strcat_s(configIniFile, "\\config.ini");
+		strcat_s(offsetsIniFile, "\\offsets.ini");
 
 #ifdef _DEBUG_CONSOLE
 
@@ -1336,9 +1400,11 @@ void ReadArgs(int argc, char* argv[])
 		mypath					= string(AppPath).substr(0, index);
 		string(mypath)._Copy_s(iniFile, MAX_PATH, index, 0);
 		string(mypath)._Copy_s(configIniFile, _MAX_PATH, index, 0);
+		string(mypath)._Copy_s(offsetsIniFile, _MAX_PATH, index, 0);
 
 		strcat_s(iniFile, "\\myseqserver.ini");
 		strcat_s(configIniFile, "\\config.ini");
+		strcat_s(offsetsIniFile, "\\offsets.ini");
 	}
 }
 
@@ -1373,8 +1439,10 @@ void Restore()
 	// Remove the icon from the system tray
 	Shell_NotifyIcon(NIM_DELETE, &g_notifyIconData);
 
-	// ..and show the window
+	// ..and show the window, bringing it to the front so restoring from
+	// the tray doesn't leave it sitting behind other windows.
 	ShowWindow(h_MySEQServer, SW_SHOW);
+	SetForegroundWindow(h_MySEQServer);
 }
 
 void ToggleStartMinimized()

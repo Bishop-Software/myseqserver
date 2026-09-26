@@ -48,23 +48,27 @@ NetworkServer::~NetworkServer(void)
 
 void NetworkServer::listIPAddresses()
 {
-	TCHAR mybuffer[1024];
-	mybuffer[0] = _T('\0');
-	hostent* localHost;
-	int j	  = 0;
-	localHost = gethostbyname("localhost");
+	// Logged to the dialog's log pane rather than a blocking MessageBox, so
+	// listing addresses doesn't stall the UI and the text can be selected/
+	// copied like any other log line.
+	vector<string> seen;
+	int count = 0;
+
+	auto logIfNew = [&](const string& addr)
+	{
+		if (count > 10 || find(seen.begin(), seen.end(), addr) != seen.end())
+			return;
+		seen.push_back(addr);
+		count++;
+		logEvent("Local IP address: " + addr);
+	};
+
+	hostent* localHost = gethostbyname("localhost");
 	for (int i = 0; localHost && localHost->h_addr_list[i] != 0; ++i)
 	{
 		struct in_addr addr;
 		memcpy(&addr, localHost->h_addr_list[i], sizeof(struct in_addr));
-		// assign our local host to the designated ip address
-		if (mybuffer[0] == _T('\0'))
-			sprintf_s(mybuffer, "%s", inet_ntoa(addr));
-		else
-			strcat_s(mybuffer, inet_ntoa(addr));
-		j = j + 1;
-		if (j > 10)
-			break;
+		logIfNew(inet_ntoa(addr));
 	}
 
 	localHost = gethostbyname("");
@@ -72,20 +76,8 @@ void NetworkServer::listIPAddresses()
 	{
 		struct in_addr addr;
 		memcpy(&addr, localHost->h_addr_list[i], sizeof(struct in_addr));
-		if (mybuffer[0] == _T('\0'))
-		{
-			sprintf_s(mybuffer, "%s", inet_ntoa(addr));
-		}
-		else
-		{
-			strcat_s(mybuffer, "\r\n");
-			strcat_s(mybuffer, inet_ntoa(addr));
-		}
-		j = j + 1;
-		if (j > 10)
-			break;
+		logIfNew(inet_ntoa(addr));
 	}
-	MessageBox(h_MySEQServer ? h_MySEQServer : NULL, (LPCSTR)&mybuffer, "MySEQ Open Server: Local IP Addresses", MB_OK | MB_TOPMOST | MB_ICONINFORMATION);
 }
 
 bool NetworkServer::openListenerSocket(bool service)
@@ -538,7 +530,7 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 
 			if (pTemp)
 			{
-				if (tempMemReader.extractToBuffer(pTemp, spawnParser.rawBuffer, spawnParser.largestOffset))
+				if (tempMemReader.extractToBuffer(pTemp, spawnParser.rawBuffer.data(), spawnParser.largestOffset))
 				{
 					// For this type of packet, we only use the gamer name and the PID
 					spawnParser.packNetBufferRaw(OPT_process, tempMemReader.getCurrentPID());
@@ -607,7 +599,7 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 			cout << "MySEQServer: pSelf is 0x" << hex << pTemp << endl;
 
 		if (pTemp)
-			if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer, spawnParser.largestOffset))
+			if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer.data(), spawnParser.largestOffset))
 			{
 				spawnParser.packNetBufferRaw(OPT_self, pTemp);
 				spawnParser.pushNetBuffer();
@@ -628,12 +620,12 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 			grab the whole thing. */
 		for (maxLoop = 0; maxLoop < 2000; maxLoop++)
 		{
-			if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer, spawnParser.largestOffset))
+			if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer.data(), spawnParser.largestOffset))
 			{
 				if (spawnParser.extractPrevPointer())
 				{
 					pTemp = spawnParser.extractPrevPointer();
-					cout << "pTemp extract " << pTemp << " raw " << spawnParser.rawBuffer << " largest offset " << spawnParser.largestOffset << endl;
+					cout << "pTemp extract " << pTemp << " raw " << spawnParser.rawBuffer.data() << " largest offset " << spawnParser.largestOffset << endl;
 				}
 				else
 					break;
@@ -654,7 +646,7 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 
 		while (pTemp)
 		{
-			if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer, spawnParser.largestOffset))
+			if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer.data(), spawnParser.largestOffset))
 			{
 				spawnParser.packNetBufferRaw(OPT_spawns, pTemp);
 				spawnParser.pushNetBuffer();
@@ -677,7 +669,7 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 			// Get us to the top of the list
 			for (maxLoop = 0; maxLoop < 2000; maxLoop++)
 			{
-				if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer, spawnParser.largestOffset))
+				if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer.data(), spawnParser.largestOffset))
 				{
 					if (spawnParser.extractPrevPointer())
 						pTemp = spawnParser.extractPrevPointer();
@@ -689,7 +681,7 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 			int pcNum = 0, npcNum = 0, corpseNum = 0, tallyCount = 0;
 			while (pTemp)
 			{
-				if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer, spawnParser.largestOffset))
+				if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer.data(), spawnParser.largestOffset))
 				{
 					result = spawnParser.extractRawByte(spawnParser.OT_type);
 					switch (result)
@@ -737,7 +729,7 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 
 		if (pTemp)
 		{
-			if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer, spawnParser.largestOffset))
+			if (mr_intf->extractToBuffer(pTemp, spawnParser.rawBuffer.data(), spawnParser.largestOffset))
 			{
 				spawnParser.packNetBufferRaw(OPT_target, pTemp);
 				spawnParser.pushNetBuffer();
@@ -786,7 +778,7 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 
 		while (pTemp)
 		{
-			if (mr_intf->extractToBuffer(pTemp, itemParser.rawBuffer, itemParser.largestOffset))
+			if (mr_intf->extractToBuffer(pTemp, itemParser.rawBuffer.data(), itemParser.largestOffset))
 			{
 				itemParser.packItemBuffer(OPT_ground);
 				spawnParser.packNetBufferFrom(itemParser);
@@ -824,7 +816,7 @@ bool NetworkServer::processReceivedData(MemReaderInterface* mr_intf)
 			cout << "MySEQServer: pWorldInfo is 0x" << hex << pTemp << endl;
 
 		if (pTemp)
-			if (mr_intf->extractToBuffer(pTemp, worldParser.rawBuffer, worldParser.largestOffset))
+			if (mr_intf->extractToBuffer(pTemp, worldParser.rawBuffer.data(), worldParser.largestOffset))
 			{
 				worldParser.packWorldBuffer(OPT_world);
 				spawnParser.packNetBufferWorld(worldParser);
