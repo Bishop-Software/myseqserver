@@ -101,7 +101,7 @@ void Debugger::printMenu()
 	//	cout << "   wt) walk the spawnlist (reverse) using pTarget" << endl;
 	cout << "   vs) walk the spawnlist (forward) using pSelf (vt) pTarget" << endl;
 	//	cout << "   vt) walk the spawnlist (forward) using pTarget" << endl;
-	cout << "    x) exit debugger" << endl;
+	cout << "       close this window to exit the debugger" << endl;
 	cout << endl;
 }
 
@@ -118,6 +118,9 @@ void Debugger::enterDebugLoop(MemReaderInterface* mr_intf, IniReaderInterface* i
 		cout << " > ";
 
 		getline(cin, userInput);
+
+		if (cin.fail())
+			break;
 
 		if (userInput.compare(0, 1, "?") == 0)
 			printMenu();
@@ -173,8 +176,6 @@ void Debugger::enterDebugLoop(MemReaderInterface* mr_intf, IniReaderInterface* i
 			walkSpawnList(mr_intf, OT_self, false);
 		else if (userInput.compare(0, 2, "vt") == 0)
 			walkSpawnList(mr_intf, OT_target, false);
-		else if (userInput.compare(0, 1, "x") == 0)
-			break;
 		else
 			cout << " Invalid selection. Please try again." << endl;
 

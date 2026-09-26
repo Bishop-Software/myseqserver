@@ -361,6 +361,15 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 	ReadArgs(argc, argv);
 
+	// Not a documented command-line option — set internally by the Tools >
+	// Debug Console menu item when it launches a second instance of this exe,
+	// so that instance runs as a standalone debug console instead of a server.
+	char* debugConsoleEnv = NULL;
+	size_t debugConsoleEnvLen = 0;
+	_dupenv_s(&debugConsoleEnv, &debugConsoleEnvLen, "MYSEQ_DEBUG_CONSOLE");
+	debug_mode = (debugConsoleEnv != NULL);
+	free(debugConsoleEnv);
+
 	string arg;
 
 	if (argc > 1)
@@ -410,15 +419,12 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 		return FALSE;
 	}
 
-	if (argc > 1 && (!console_mode && !debug_mode && !services && !otherini))
+	if (argc > 1 && (!console_mode && !services && !otherini))
 	{
-		cout << "   Usage: server debug" << endl;
-		cout << "          server console" << endl;
+		cout << "   Usage: server console" << endl;
 		cout << "          server -f [IniFileName]" << endl;
 		cout << "          server -i" << endl;
 		cout << "          server -d" << endl
-			 << endl;
-		cout << "      debug - enter debug command line interface" << endl
 			 << endl;
 		cout << "      console - run server as a console" << endl
 			 << endl;
@@ -618,7 +624,6 @@ BOOL InitInstance(HINSTANCE hInstance, int)
 	SetWindowLong(h_MySEQServer, GWL_EXSTYLE, dwNewStyle);
 	SetWindowPos(h_MySEQServer, NULL, 0, 0, 0, 0, SWP_NOZORDER | SWP_NOMOVE | SWP_NOSIZE);
 
-	// for debug mode, we open a console for use
 	if (debug_mode || console_mode)
 	{
 		AllocConsole();
@@ -964,6 +969,39 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 			if (LOWORD(wParam) == IDM_ABOUT)
 			{
 				DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hDlg, AboutDialog);
+			}
+			if (LOWORD(wParam) == IDM_DEBUG_CONSOLE)
+			{
+				// Launch a second instance of this exe in debug mode. A separate
+				// process (rather than an in-process console) means closing its
+				// window only ends that process — Windows won't touch this one —
+				// with no special close-handling needed, and its own MemReader
+				// attach can't collide with this server's.
+				TCHAR appPath[MAX_PATH + 1];
+				GetModuleFileName(NULL, appPath, MAX_PATH);
+
+				_putenv_s("MYSEQ_DEBUG_CONSOLE", "1");
+
+				STARTUPINFO debugStartupInfo;
+				PROCESS_INFORMATION debugProcessInfo;
+				memset(&debugStartupInfo, 0, sizeof(debugStartupInfo));
+				memset(&debugProcessInfo, 0, sizeof(debugProcessInfo));
+				debugStartupInfo.cb = sizeof(debugStartupInfo);
+
+				BOOL launched = CreateProcess(appPath, NULL, 0, 0, FALSE, CREATE_DEFAULT_ERROR_MODE,
+					0, 0, &debugStartupInfo, &debugProcessInfo);
+
+				_putenv_s("MYSEQ_DEBUG_CONSOLE", "");
+
+				if (launched)
+				{
+					CloseHandle(debugProcessInfo.hProcess);
+					CloseHandle(debugProcessInfo.hThread);
+				}
+				else
+				{
+					netServer.logEvent("Failed to launch debug console.");
+				}
 			}
 			if (LOWORD(wParam) == IDC_BUTTON1)
 			{
@@ -1327,9 +1365,6 @@ void ReadArgs(int argc, char* argv[])
 
 		arg = argv[1];
 
-	debug_mode = (arg == "debug");
-	debug_mode = FALSE;
-
 	console_mode = (arg == "console");
 
 	services = (arg == "-k");
@@ -1408,6 +1443,12 @@ void ReadArgs(int argc, char* argv[])
 	}
 }
 
+// Entry point for a second instance of this exe launched in debug mode (see
+// MYSEQ_DEBUG_CONSOLE in WinMain), run on its own thread while the main
+// thread pumps the hidden window's message loop. Exits this whole (separate)
+// process when the REPL ends — closing the console window itself is enough
+// to do that (see the debug_mode branch in InitInstance/WinMain), since
+// there's no server or GUI dialog in this process to keep alive.
 void DoDebugLoop(void*)
 {
 	debugger.enterDebugLoop(&memReader, &iniReader);
