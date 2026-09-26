@@ -6,6 +6,7 @@
 #define IDS_APP_TITLE                   103
 #define IDM_ABOUT                       104
 #define IDM_EXIT                        105
+#define IDM_DEBUG_CONSOLE               106
 #define IDI_MYSEQSERVER                 107
 #define IDC_MYSEQSERVER                 109
 #define IDD_EQOFFSETSFINDER             130
