@@ -1003,18 +1003,31 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 			if (LOWORD(wParam) == IDC_BUTTON2)
 			{
 				// reload offsets
-				iniReader.openFile(iniFile);
-				iniReader.openConfigFile(configIniFile);
-				netServer.init(&iniReader);
+				try
+				{
+					iniReader.openFile(iniFile);
+					iniReader.openConfigFile(configIniFile);
+					netServer.init(&iniReader);
 
-				// close and reopen listener socket, in case port changed
-				netServer.closeListenerSocket();
-				running = netServer.openListenerSocket(false);
+					// close and reopen listener socket, in case port changed
+					netServer.closeListenerSocket();
+					running = netServer.openListenerSocket(false);
 
-				// update patch date in GUI
-				LPCSTR patchdate;
-				patchdate = iniReader.patchDate.c_str();
-				SetDlgItemText(h_MySEQServer, IDC_TEXT_PATCH, patchdate);
+					// update patch date in GUI
+					LPCSTR patchdate;
+					patchdate = iniReader.patchDate.c_str();
+					SetDlgItemText(h_MySEQServer, IDC_TEXT_PATCH, patchdate);
+
+					if (running)
+						netServer.logEvent("Reload: offsets and config reloaded successfully");
+					else
+						netServer.logEvent("Reload: config reloaded, but the listener failed to reopen (check the port)");
+				}
+				catch (Exception& ex)
+				{
+					netServer.logEvent("Reload failed: " + string(ex));
+					running = false;
+				}
 			}
 			if (LOWORD(wParam) == IDC_BUTTON3)
 			{
