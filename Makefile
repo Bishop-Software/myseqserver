@@ -24,7 +24,7 @@ help:
 	@echo "   Example: VER=1.19.1 make release"
 
 
-RELFILES += myseqserver.exe resources/myseqserver.ini resources/config.ini resources/offsets.ini
+RELFILES += MySEQ.server.exe resources/myseqserver.ini resources/config.ini resources/offsets.ini
 
 .PHONY : release
 release: $(RELFILES)
