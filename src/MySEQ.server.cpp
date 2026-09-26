@@ -1042,18 +1042,29 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 			break;
 
 		case WM_SYSCOMMAND:
-			switch (wParam)
+			switch (wParam & 0xFFF0)
 			{
 				case SC_MINIMIZE:
-				{
-					// do stuff
 					Minimize();
 					return (INT_PTR)TRUE;
-					break;
-				}
+				case SC_CLOSE:
+					// The titlebar X, Alt+F4, and the system menu's Close all
+					// route here. Minimize to tray instead of letting the
+					// default handling destroy the window -- otherwise the
+					// server keeps running as a windowless, tray-icon-less
+					// background process with no way to bring the UI back.
+					Minimize();
+					return (INT_PTR)TRUE;
 				default:
 					break;
 			}
+			break;
+
+		case WM_CLOSE:
+			// Belt-and-suspenders for any WM_CLOSE that arrives without going
+			// through WM_SYSCOMMAND/SC_CLOSE above.
+			Minimize();
+			return (INT_PTR)TRUE;
 
 		case WM_TRAYICON:
 		{
@@ -1416,8 +1427,10 @@ void Restore()
 	// Remove the icon from the system tray
 	Shell_NotifyIcon(NIM_DELETE, &g_notifyIconData);
 
-	// ..and show the window
+	// ..and show the window, bringing it to the front so restoring from
+	// the tray doesn't leave it sitting behind other windows.
 	ShowWindow(h_MySEQServer, SW_SHOW);
+	SetForegroundWindow(h_MySEQServer);
 }
 
 void ToggleStartMinimized()
