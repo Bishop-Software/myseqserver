@@ -23,7 +23,12 @@
 #include <cstdlib>
 #include <string>
 
-#define TO_LOWER(str) (transform(str.begin(), str.end(), str.begin(), (int (*)(int))tolower))
+// tolower() is only well-defined for values representable as unsigned char
+// (or EOF); casting to unsigned char before the call (rather than just
+// casting tolower's signature to match transform's expected type) avoids
+// undefined behavior on platforms where char is signed and the string has
+// extended-ASCII bytes.
+#define TO_LOWER(str) (transform((str).begin(), (str).end(), (str).begin(), [](unsigned char c) { return static_cast<char>(tolower(c)); }))
 
 #define DISPLAY_SPAWN_ITEM(off, member) cout << "    " << spawnParser.ptrNames[spawnParser.off] << " -> " << spawnParser.tempNetBuffer.member << endl
 
@@ -938,7 +943,9 @@ void Debugger::scanForWorldFromDate(MemReaderInterface* mr_intf, offset_types ot
 	yearOffset = worldParser.offsets[worldParser.OT_year];
 
 	// First get our month/day/year values if given
-	mFind = dFind = yFind = 0;
+	mFind = 0;
+	dFind = 0;
+	yFind = 0;
 
 	if (tokenizeDate(args, tokens) != 3)
 	{

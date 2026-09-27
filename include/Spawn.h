@@ -55,6 +55,12 @@ struct netBuffer_t
 	 * type-checked instead of relying on unrelated field names lining up
 	 * by coincidence - both members must keep this exact byte layout.
 	 */
+	// Nameless struct/union is an MSVC extension (C4201), not standard C++ -
+	// but it's exactly what makes the reinterpretation above type-checked and
+	// field-named instead of relying on manual offsets, so it's kept and the
+	// warning is suppressed locally rather than restructuring the design.
+#pragma warning(push)
+#pragma warning(disable : 4201)
 	union
 	{
 		struct
@@ -75,6 +81,7 @@ struct netBuffer_t
 			BYTE day, month;
 		} worldClock;
 	};
+#pragma warning(pop)
 
 	UINT primary;
 

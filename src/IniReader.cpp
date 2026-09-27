@@ -196,20 +196,20 @@ QWORD IniReader::readIntegerEntry(const string& section, const string& entry, bo
 {
 
 	QWORD rtn = 0;
-	_TCHAR buffer[255];
-	if (GetPrivateProfileString(section.c_str(), entry.c_str(), TEXT(""), buffer, sizeof(buffer), config ? offsetsfilename.c_str() : filename.c_str()) > 0)
+	_TCHAR intBuffer[255];
+	if (GetPrivateProfileString(section.c_str(), entry.c_str(), TEXT(""), intBuffer, sizeof(intBuffer), config ? offsetsfilename.c_str() : filename.c_str()) > 0)
 
 	{
 
 		// See if number is hex (prefixed with 0x) or decimal (no prefix)
 
-		if (buffer[0] == '0')
+		if (intBuffer[0] == '0')
 
-			rtn = strtoull(buffer, NULL, 16);
+			rtn = strtoull(intBuffer, NULL, 16);
 
 		else
 
-			rtn = (QWORD)atoi(buffer);
+			rtn = (QWORD)atoi(intBuffer);
 	}
 
 	return rtn;

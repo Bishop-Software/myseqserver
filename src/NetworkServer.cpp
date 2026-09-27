@@ -104,7 +104,7 @@ bool NetworkServer::openListenerSocket(bool service)
 	psockAddrIn->sin_addr.s_addr = INADDR_ANY;
 
 	// Attempt to bind the listener socket
-	psockAddrIn->sin_port = htons(port);
+	psockAddrIn->sin_port = htons(static_cast<u_short>(port));
 
 	if (bind(sockListener, (struct sockaddr*)&sockAddr, sockAddrSize) == SOCKET_ERROR)
 	{
