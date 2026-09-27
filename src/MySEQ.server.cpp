@@ -1262,6 +1262,54 @@ static bool TryEqGamePath(const TCHAR* baseDir, const TCHAR* subPath, TCHAR* out
 	return true;
 }
 
+// Shows a wait cursor and disables the Offset Finder's scan/write buttons for
+// as long as a scan is running, so a click registers visibly even though the
+// scan itself runs synchronously on the dialog's thread. IDC_BUTTON2 ("Write
+// Offsets to ini file") is disabled here too but deliberately never
+// re-enabled on destruction - its enabled state is scan-result-dependent
+// (EQGameScanner::ScanExecutable only turns it on when a scanned offset
+// actually differs from the ini file), not something to force back on.
+class ScopedScanCursor
+{
+public:
+	explicit ScopedScanCursor(HWND dlg) :
+		hDlg(dlg)
+	{
+		previousCursor = SetCursor(LoadCursor(NULL, IDC_WAIT));
+		EnableWindow(GetDlgItem(hDlg, IDOK), FALSE);
+		EnableWindow(GetDlgItem(hDlg, IDC_BUTTON2), FALSE);
+		EnableWindow(GetDlgItem(hDlg, IDC_BUTTON3), FALSE);
+	}
+
+	~ScopedScanCursor()
+	{
+		SetCursor(previousCursor);
+		EnableWindow(GetDlgItem(hDlg, IDOK), TRUE);
+		EnableWindow(GetDlgItem(hDlg, IDC_BUTTON3), TRUE);
+	}
+
+	ScopedScanCursor(const ScopedScanCursor&)			 = delete;
+	ScopedScanCursor& operator=(const ScopedScanCursor&) = delete;
+
+private:
+	HWND hDlg;
+	HCURSOR previousCursor;
+};
+
+// "Write Offsets to ini file" only enables itself once a primary-offset scan
+// finds a value that differs from the ini (see EQGameScanner::ScanExecutable)
+// - nothing in the dialog explained that relationship, so the button just
+// looked permanently greyed out. Spells it out in the status line instead.
+static void UpdateOffsetScanStatus(HWND hDlg)
+{
+	if (!scanner.executableExists())
+		SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Scan failed - see the log above for details.");
+	else if (IsWindowEnabled(GetDlgItem(hDlg, IDC_BUTTON2)))
+		SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Offsets differ from the ini file - click \"Write Offsets to ini file\" to update.");
+	else
+		SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Offsets already match the ini file. Nothing to write.");
+}
+
 INT_PTR CALLBACK OffsetDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM)
 {
 	switch (message)
@@ -1288,11 +1336,21 @@ INT_PTR CALLBACK OffsetDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM)
 			switch (LOWORD(wParam))
 			{
 				case IDOK:
+				{
+					// The scan itself is fast (one bulk read of the exe file off
+					// disk plus an in-memory byte search), but it still runs
+					// synchronously on this thread, so give some feedback that a
+					// click was registered rather than the dialog looking frozen.
+					ScopedScanCursor scanCursor(hDlg);
 					scanner.setExe(eqFileName);
 					scanner.ScanExecutable(hDlg, &iniReader, &netServer);
+					UpdateOffsetScanStatus(hDlg);
 					// EndDialog(hDlg, IDOK);
 					break;
+				}
 				case IDC_BUTTON2:
+				{
+					ScopedScanCursor scanCursor(hDlg);
 					scanner.setExe(eqFileName);
 					if (scanner.ScanExecutable(hDlg, &iniReader, &netServer, true))
 					{
@@ -1308,14 +1366,27 @@ INT_PTR CALLBACK OffsetDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM)
 						LPCSTR patchdate;
 						patchdate = iniReader.patchDate.c_str();
 						SetDlgItemText(h_MySEQServer, IDC_TEXT_PATCH, patchdate);
+						SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Offsets written to the ini file and reloaded.");
 						// EndDialog(hDlg, IDC_BUTTON2);
 					}
+					else
+					{
+						SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Nothing was written - see the log above for details.");
+					}
 					break;
+				}
 				case IDC_BUTTON3:
+				{
+					ScopedScanCursor scanCursor(hDlg);
 					scanner.setExe(eqFileName);
 					scanner.ScanSecondary(hDlg, &iniReader, &netServer);
+					if (!scanner.executableExists())
+						SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Scan failed - see the log above for details.");
+					else
+						SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Secondary offsets scanned (read-only) - see the log above for details.");
 					// EndDialog(hDlg, IDOK);
 					break;
+				}
 				case IDCANCEL:
 					EndDialog(hDlg, IDCANCEL);
 					break;
