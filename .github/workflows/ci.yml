@@ -10,6 +10,14 @@ jobs:
   build:
     runs-on: windows-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Debug, Release]
+
+    env:
+      BUILD_DIR: cmake-build-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
+
     steps:
       - uses: actions/checkout@v5
 
@@ -19,10 +27,10 @@ jobs:
           arch: x64
 
       - name: Configure (CMake + Ninja)
-        run: cmake -G Ninja -S . -B cmake-build-debug -DCMAKE_BUILD_TYPE=Debug
+        run: cmake -G Ninja -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
 
       - name: Build
-        run: cmake --build cmake-build-debug
+        run: cmake --build ${{ env.BUILD_DIR }}
 
       - name: Run offline smoke tests
-        run: .\cmake-build-debug\OffsetScanningTests.exe
+        run: .\${{ env.BUILD_DIR }}\OffsetScanningTests.exe
