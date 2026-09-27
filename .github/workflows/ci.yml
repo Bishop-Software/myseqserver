@@ -13,11 +13,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - build_type: Debug
-            build_dir: cmake-build-debug
-          - build_type: Release
-            build_dir: cmake-build-release
+        build_type: [Debug, Release]
+
+    env:
+      BUILD_DIR: cmake-build-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
 
     steps:
       - uses: actions/checkout@v5
@@ -28,10 +27,10 @@ jobs:
           arch: x64
 
       - name: Configure (CMake + Ninja)
-        run: cmake -G Ninja -S . -B ${{ matrix.build_dir }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        run: cmake -G Ninja -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
 
       - name: Build
-        run: cmake --build ${{ matrix.build_dir }}
+        run: cmake --build ${{ env.BUILD_DIR }}
 
       - name: Run offline smoke tests
-        run: .\${{ matrix.build_dir }}\OffsetScanningTests.exe
+        run: .\${{ env.BUILD_DIR }}\OffsetScanningTests.exe
