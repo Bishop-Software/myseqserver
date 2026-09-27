@@ -56,7 +56,7 @@
 
 using namespace std;
 
-using QWORD = uint64_t;
+using QWORD	 = uint64_t;
 using PQWORD = uint64_t*;
 
 #define EXCLEV_WARNING 1
@@ -75,7 +75,7 @@ class Exception : public string
 
 {
 
-int level;
+	int level;
 
 public:
 	Exception(const int l, const string& s) :
@@ -84,7 +84,10 @@ public:
 	{
 	}
 
-	int getLevel() const { return level; }
+	int getLevel() const
+	{
+		return level;
+	}
 };
 
 // Minimal RAII owner for a Win32 HANDLE: closes it via CloseHandle when the
@@ -104,9 +107,12 @@ public:
 	{
 	}
 
-	~ScopedHandle() { close(); }
+	~ScopedHandle()
+	{
+		close();
+	}
 
-	ScopedHandle(const ScopedHandle&) = delete;
+	ScopedHandle(const ScopedHandle&)			 = delete;
 	ScopedHandle& operator=(const ScopedHandle&) = delete;
 
 	ScopedHandle(ScopedHandle&& other) noexcept :
@@ -128,8 +134,14 @@ public:
 		return *this;
 	}
 
-	bool valid() const { return handle != invalid; }
-	HANDLE get() const { return handle; }
+	bool valid() const
+	{
+		return handle != invalid;
+	}
+	HANDLE get() const
+	{
+		return handle;
+	}
 
 	// Hands ownership to the caller; the destructor will no longer close it.
 	HANDLE release()

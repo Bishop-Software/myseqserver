@@ -223,7 +223,7 @@ public:
 
 	Spawn();
 
-	Spawn(const Spawn&) = delete;
+	Spawn(const Spawn&)			   = delete;
 	Spawn& operator=(const Spawn&) = delete;
 
 	void setOffset(offset_types ot, UINT value, const string& ptrName);

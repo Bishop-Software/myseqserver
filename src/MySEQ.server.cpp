@@ -371,7 +371,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	// Not a documented command-line option — set internally by the Tools >
 	// Debug Console menu item when it launches a second instance of this exe,
 	// so that instance runs as a standalone debug console instead of a server.
-	char* debugConsoleEnv = NULL;
+	char* debugConsoleEnv	  = NULL;
 	size_t debugConsoleEnvLen = 0;
 	_dupenv_s(&debugConsoleEnv, &debugConsoleEnvLen, "MYSEQ_DEBUG_CONSOLE");
 	debug_mode = (debugConsoleEnv != NULL);
@@ -406,7 +406,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 		if (arg == "-k")
 		{
-			static TCHAR serviceName[] = TEXT("MySEQServer");
+			static TCHAR serviceName[]			= TEXT("MySEQServer");
 			SERVICE_TABLE_ENTRY DispatchTable[] = {{serviceName, ServiceMain}, {NULL, NULL}};
 
 			StartServiceCtrlDispatcher(DispatchTable);
@@ -780,8 +780,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					if (memReader.isValid())
 					{
 						// we have a good eqgame.exe process
-						check_delay	  = 0;
-						lastDataTick  = GetTickCount64();
+						check_delay	 = 0;
+						lastDataTick = GetTickCount64();
 						if (server_status != 2 && h_MySEQServer)
 							SetDlgItemText(h_MySEQServer, IDC_TEXT_STATUS, "Connected");
 						server_status = 2;
@@ -918,7 +918,7 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 				LOGFONT lf	   = {};
 				if (hDlgFont && GetObject(hDlgFont, sizeof(lf), &lf))
 				{
-					lf.lfWeight	 = FW_BOLD;
+					lf.lfWeight	  = FW_BOLD;
 					g_hHeaderFont = CreateFontIndirect(&lf);
 					if (g_hHeaderFont)
 					{
@@ -1274,9 +1274,7 @@ INT_PTR CALLBACK OffsetDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM)
 				TCHAR basePath[_MAX_PATH];
 				if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_PROGRAM_FILES, NULL, 0, basePath)))
 				{
-					TryEqGamePath(basePath, "\\sony\\everquest", NULL, eqFileName, NULL)
-						|| TryEqGamePath(basePath, "\\soe\\everquest", NULL, eqFileName, NULL)
-						|| TryEqGamePath(basePath, "\\everquest", NULL, eqFileName, NULL);
+					TryEqGamePath(basePath, "\\sony\\everquest", NULL, eqFileName, NULL) || TryEqGamePath(basePath, "\\soe\\everquest", NULL, eqFileName, NULL) || TryEqGamePath(basePath, "\\everquest", NULL, eqFileName, NULL);
 				}
 			}
 
@@ -1344,10 +1342,7 @@ INT_PTR CALLBACK OffsetDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM)
 						TCHAR basePath[_MAX_PATH];
 						if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_PROGRAM_FILES, NULL, 0, basePath)))
 						{
-							TryEqGamePath(basePath, "\\Sony Online Entertainment\\Installed Games\\EverQuest", eqFilePath, eqFileName, eqExeName)
-								|| TryEqGamePath(basePath, "\\sony\\everquest", eqFilePath, eqFileName, eqExeName)
-								|| TryEqGamePath(basePath, "\\soe\\everquest", eqFilePath, eqFileName, eqExeName)
-								|| TryEqGamePath(basePath, "\\everquest", eqFilePath, eqFileName, eqExeName);
+							TryEqGamePath(basePath, "\\Sony Online Entertainment\\Installed Games\\EverQuest", eqFilePath, eqFileName, eqExeName) || TryEqGamePath(basePath, "\\sony\\everquest", eqFilePath, eqFileName, eqExeName) || TryEqGamePath(basePath, "\\soe\\everquest", eqFilePath, eqFileName, eqExeName) || TryEqGamePath(basePath, "\\everquest", eqFilePath, eqFileName, eqExeName);
 						}
 						if (eqExeName[0] == _T('\0'))
 						{
