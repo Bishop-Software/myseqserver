@@ -84,11 +84,9 @@ const SpawnInfoOffsetEntry kSpawnInfoOffsets[] = {
 };
 } // namespace
 
-EQGameScanner::EQGameScanner()
-= default;
+EQGameScanner::EQGameScanner() = default;
 
-EQGameScanner::~EQGameScanner()
-= default;
+EQGameScanner::~EQGameScanner() = default;
 void EQGameScanner::setExe(const TCHAR* str)
 {
 	executablePath = str;
@@ -258,10 +256,10 @@ bool EQGameScanner::loadPEInfo()
 		file.read((char*)sectionHeader, sizeof(sectionHeader));
 
 		PESection sec;
-		sec.virtualSize	= *reinterpret_cast<DWORD*>(sectionHeader + 8);
+		sec.virtualSize	   = *reinterpret_cast<DWORD*>(sectionHeader + 8);
 		sec.virtualAddress = *reinterpret_cast<DWORD*>(sectionHeader + 12);
-		sec.rawSize			= *reinterpret_cast<DWORD*>(sectionHeader + 16);
-		sec.rawPointer		= *reinterpret_cast<DWORD*>(sectionHeader + 20);
+		sec.rawSize		   = *reinterpret_cast<DWORD*>(sectionHeader + 16);
+		sec.rawPointer	   = *reinterpret_cast<DWORD*>(sectionHeader + 20);
 		peSections.push_back(sec);
 	}
 
@@ -325,7 +323,7 @@ QWORD EQGameScanner::findEQAbsolutePointer(QWORD startAddress, std::size_t block
 		if (!fileOffsetToRVA(startAddress + i + tPos + 4, rvaAfterField))
 			continue;
 
-		QWORD candidate	= imageBase + rvaAfterField + disp;
+		QWORD candidate	   = imageBase + rvaAfterField + disp;
 		QWORD candidateRva = candidate - imageBase;
 
 		// A genuine RIP-relative reference must resolve into a mapped
@@ -383,9 +381,9 @@ bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, Netwo
 
 	for (const auto& entry : kPrimaryOffsets)
 	{
-		QWORD mystart	  = (QWORD)ir_intf->readIntegerEntry(entry.iniSection, "Start", true);
+		QWORD mystart	 = (QWORD)ir_intf->readIntegerEntry(entry.iniSection, "Start", true);
 		string mypattern = ir_intf->readEscapeStrings(entry.iniSection, "Pattern");
-		string mymask	  = ir_intf->readStringEntry(entry.iniSection, "Mask", true);
+		string mymask	 = ir_intf->readStringEntry(entry.iniSection, "Mask", true);
 
 		QWORD matchAddr = findEQAbsolutePointer(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
 
@@ -456,9 +454,9 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 	// falling back to whatever the ini currently has.
 	EQPrimaryOffsets::CharInfo = net_intf->current_offset((int)NetworkServer::OT_self);
 	{
-		QWORD mystart	  = (QWORD)ir_intf->readIntegerEntry("CharInfo", "Start", true);
+		QWORD mystart	 = (QWORD)ir_intf->readIntegerEntry("CharInfo", "Start", true);
 		string mypattern = ir_intf->readEscapeStrings("CharInfo", "Pattern");
-		string mymask	  = ir_intf->readStringEntry("CharInfo", "Mask", true);
+		string mymask	 = ir_intf->readStringEntry("CharInfo", "Mask", true);
 
 		QWORD matchAddr = findEQAbsolutePointer(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
 		if (matchAddr != NULL)
@@ -469,9 +467,9 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 	for (const auto& entry : kSpawnInfoOffsets)
 	{
-		QWORD mystart	  = (QWORD)ir_intf->readIntegerEntry(entry.iniSection, "Start", true);
+		QWORD mystart	 = (QWORD)ir_intf->readIntegerEntry(entry.iniSection, "Start", true);
 		string mypattern = ir_intf->readEscapeStrings(entry.iniSection, "Pattern");
-		string mymask	  = ir_intf->readStringEntry(entry.iniSection, "Mask", true);
+		string mymask	 = ir_intf->readStringEntry(entry.iniSection, "Mask", true);
 
 		QWORD matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
 

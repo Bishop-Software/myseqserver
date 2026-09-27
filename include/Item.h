@@ -116,7 +116,7 @@ private:
 public:
 	Item();
 
-	Item(const Item&) = delete;
+	Item(const Item&)			 = delete;
 	Item& operator=(const Item&) = delete;
 
 	void init(IniReaderInterface* ir_intf);

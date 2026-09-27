@@ -112,7 +112,7 @@ private:
 public:
 	World(void);
 
-	World(const World&) = delete;
+	World(const World&)			   = delete;
 	World& operator=(const World&) = delete;
 
 	void init(IniReaderInterface* ir_intf);
