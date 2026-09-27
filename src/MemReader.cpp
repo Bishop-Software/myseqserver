@@ -30,7 +30,12 @@
 #define RTDEBUG(...) if (debug) cout << __VA_ARGS__ << endl
 // clang-format on
 
-#define TO_LOWER(str) (transform(str.begin(), str.end(), str.begin(), (int (*)(int))tolower))
+// tolower() is only well-defined for values representable as unsigned char
+// (or EOF); casting to unsigned char before the call (rather than just
+// casting tolower's signature to match transform's expected type) avoids
+// undefined behavior on platforms where char is signed and the string has
+// extended-ASCII bytes.
+#define TO_LOWER(str) (transform((str).begin(), (str).end(), (str).begin(), [](unsigned char c) { return static_cast<char>(tolower(c)); }))
 
 // Buffer size used by extractString/extractString2 for reading short,
 // null-terminated names (spawn names, zone names, etc.) out of the target
