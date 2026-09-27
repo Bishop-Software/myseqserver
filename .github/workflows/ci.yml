@@ -35,6 +35,16 @@ jobs:
       - name: Run offline smoke tests
         run: .\${{ env.BUILD_DIR }}\OffsetScanningTests.exe
 
+      # Only the Release exe is what actually ships (see the package job) -
+      # no need to upload the Debug build too.
+      - name: Upload Release build artifact
+        if: matrix.build_type == 'Release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-build
+          path: ${{ env.BUILD_DIR }}\MySEQ.server.exe
+          retention-days: 1
+
   format:
     runs-on: ubuntu-latest
 
@@ -61,3 +71,52 @@ jobs:
             fi
           done
           exit $failed
+
+  # Exercises the actual `make release` packaging path (the Makefile is
+  # Unix-shell syntax, so this runs on ubuntu-latest rather than the
+  # windows-latest build runners; it only needs the already-built Windows
+  # exe as an input, not to execute it). Catches the class of bug that bit
+  # this exact target before: RELFILES referencing a stale executable
+  # filename that no longer matched the real build output, so `make
+  # release` silently could not have succeeded until someone manually
+  # tried it.
+  package:
+    needs: build
+    runs-on: ubuntu-latest
+
+    env:
+      VER: 0.0.0-ci
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download Release build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-build
+
+      - name: Install packaging tools
+        run: sudo apt-get update && sudo apt-get install -y make zip unzip
+
+      - name: Build the release zip
+        run: make release VER=${{ env.VER }}
+
+      - name: Verify release zip contents
+        run: |
+          set -e
+          zip_path="releases/myseq.server.${VER}.zip"
+          if [ ! -f "$zip_path" ]; then
+            echo "::error::Release zip not found: $zip_path"
+            exit 1
+          fi
+          actual=$(unzip -Z1 "$zip_path" | sort)
+          expected=$(printf '%s\n' "MySEQ.server.exe" "myseqserver.ini" "config.ini" "offsets.ini" | sort)
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::Release zip contents don't match what's expected"
+            echo "--- expected ---"
+            echo "$expected"
+            echo "--- actual ---"
+            echo "$actual"
+            exit 1
+          fi
+          echo "Release zip contents verified: $actual"
