@@ -22,7 +22,7 @@
 
 #include "MySEQ.server.h"
 
-#include <WinSvc.h>
+#include <winsvc.h>
 #include "time.h"
 #include <ShellAPI.h>
 #include <process.h>
@@ -53,6 +53,13 @@ using namespace std;
 #define ID_TRAY_APP_ICON 6000
 #define WM_TRAYICON (WM_USER + 1)
 
+// Status heartbeat: periodically checks whether a "Connected" client has
+// gone quiet (no FD_READ in a while) despite the socket still being open,
+// so the status text/color don't stay on stale green data indefinitely.
+#define IDT_STATUS_HEARTBEAT 1
+#define STATUS_HEARTBEAT_INTERVAL_MS 5000
+#define STATUS_STALE_THRESHOLD_MS 15000
+
 UINT WM_TASKBARCREATED = 0;
 
 // #define _DEBUG_SERVICE
@@ -66,6 +73,10 @@ SERVICE_STATUS_HANDLE m_ServiceStatusHandle;
 // background color
 HBRUSH g_hbrBackground = GetSysColorBrush(COLOR_MENU);
 bool bRunning;
+
+// Bold variant of the server dialog's font, used for its section headers
+// (created in ServerDialog's WM_INITDIALOG, freed on WM_DESTROY).
+HFONT g_hHeaderFont = NULL;
 
 // Global Variables:
 HINSTANCE hInst; // current instance
@@ -100,6 +111,7 @@ BOOL InitInstance(HINSTANCE, int);
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK ServerDialog(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK OffsetDialog(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK AboutDialog(HWND, UINT, WPARAM, LPARAM);
 BOOL WINAPI CtrlHandler(DWORD dwCtrlType);
 
 void DoDebugLoop(void*);
@@ -156,6 +168,7 @@ void WINAPI ServiceMain(DWORD, LPTSTR*)
 
 		iniReader.openFile(iniFile);
 		iniReader.openConfigFile(configIniFile);
+		iniReader.openOffsetsFile(offsetsIniFile);
 
 		netServer.init(&iniReader);
 
@@ -173,6 +186,8 @@ void WINAPI ServiceMain(DWORD, LPTSTR*)
 		iniReader.openFile(iniFile);
 
 		iniReader.openConfigFile(configIniFile);
+
+		iniReader.openOffsetsFile(offsetsIniFile);
 
 		netServer.init(&iniReader);
 
@@ -353,6 +368,15 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 	ReadArgs(argc, argv);
 
+	// Not a documented command-line option — set internally by the Tools >
+	// Debug Console menu item when it launches a second instance of this exe,
+	// so that instance runs as a standalone debug console instead of a server.
+	char* debugConsoleEnv	  = NULL;
+	size_t debugConsoleEnvLen = 0;
+	_dupenv_s(&debugConsoleEnv, &debugConsoleEnvLen, "MYSEQ_DEBUG_CONSOLE");
+	debug_mode = (debugConsoleEnv != NULL);
+	free(debugConsoleEnv);
+
 	string arg;
 
 	if (argc > 1)
@@ -382,7 +406,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 		if (arg == "-k")
 		{
-			static TCHAR serviceName[] = TEXT("MySEQServer");
+			static TCHAR serviceName[]			= TEXT("MySEQServer");
 			SERVICE_TABLE_ENTRY DispatchTable[] = {{serviceName, ServiceMain}, {NULL, NULL}};
 
 			StartServiceCtrlDispatcher(DispatchTable);
@@ -402,15 +426,12 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 		return FALSE;
 	}
 
-	if (argc > 1 && (!console_mode && !debug_mode && !services && !otherini))
+	if (argc > 1 && (!console_mode && !services && !otherini))
 	{
-		cout << "   Usage: server debug" << endl;
-		cout << "          server console" << endl;
+		cout << "   Usage: server console" << endl;
 		cout << "          server -f [IniFileName]" << endl;
 		cout << "          server -i" << endl;
 		cout << "          server -d" << endl
-			 << endl;
-		cout << "      debug - enter debug command line interface" << endl
 			 << endl;
 		cout << "      console - run server as a console" << endl
 			 << endl;
@@ -438,7 +459,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	else if (!services)
 	{
 		cout << "========================" << endl
-			 << "  MySEQServer v2.4.1.0  " << endl
+			 << "  MySEQServer v3.0.0.0  " << endl
 			 << "========================" << endl
 			 << endl
 			 << "This software is covered under the GNU Public License (GPL)" << endl
@@ -452,6 +473,8 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	iniReader.openFile(iniFile);
 
 	iniReader.openConfigFile(configIniFile);
+
+	iniReader.openOffsetsFile(offsetsIniFile);
 
 	netServer.hwnd = h_Main;
 
@@ -608,7 +631,6 @@ BOOL InitInstance(HINSTANCE hInstance, int)
 	SetWindowLong(h_MySEQServer, GWL_EXSTYLE, dwNewStyle);
 	SetWindowPos(h_MySEQServer, NULL, 0, 0, 0, 0, SWP_NOZORDER | SWP_NOMOVE | SWP_NOSIZE);
 
-	// for debug mode, we open a console for use
 	if (debug_mode || console_mode)
 	{
 		AllocConsole();
@@ -758,11 +780,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					if (memReader.isValid())
 					{
 						// we have a good eqgame.exe process
-						check_delay	  = 0;
+						check_delay	 = 0;
+						lastDataTick = GetTickCount64();
+						if (server_status != 2 && h_MySEQServer)
+							SetDlgItemText(h_MySEQServer, IDC_TEXT_STATUS, "Connected");
 						server_status = 2;
 					}
 					else
 					{
+						if (server_status != 1 && h_MySEQServer)
+							SetDlgItemText(h_MySEQServer, IDC_TEXT_STATUS, "Connected (no EQ)");
 						server_status = 1;
 						check_delay	  = (check_delay + 1) % 10;
 						if (check_delay == 2)
@@ -788,13 +815,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						memReader.openFirstProcess("eqgame", false);
 					netServer.closeClientSocket();
 					netServer.openClientSocket();
+					lastDataTick = GetTickCount64();
 					if (memReader.getCurrentPID() == 0)
 						server_status = 1;
 					else
 						server_status = 2;
 					if (h_MySEQServer)
 					{
-						SetDlgItemText(h_MySEQServer, IDC_TEXT_STATUS, "Connected");
+						SetDlgItemText(h_MySEQServer, IDC_TEXT_STATUS, server_status == 2 ? "Connected" : "Connected (no EQ)");
 						check_delay = 0;
 					}
 				}
@@ -881,7 +909,48 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 	switch (message)
 	{
 		case WM_INITDIALOG:
+			SetMenu(hDlg, LoadMenu(hInst, MAKEINTRESOURCE(IDC_MYSEQSERVER)));
+
+			// Bold the section header labels that replaced the old GROUPBOX
+			// frames, so they still read as section breaks without a drawn box.
+			{
+				HFONT hDlgFont = (HFONT)SendMessage(hDlg, WM_GETFONT, 0, 0);
+				LOGFONT lf	   = {};
+				if (hDlgFont && GetObject(hDlgFont, sizeof(lf), &lf))
+				{
+					lf.lfWeight	  = FW_BOLD;
+					g_hHeaderFont = CreateFontIndirect(&lf);
+					if (g_hHeaderFont)
+					{
+						SendDlgItemMessage(hDlg, IDC_HEADER_SERVER, WM_SETFONT, (WPARAM)g_hHeaderFont, TRUE);
+						SendDlgItemMessage(hDlg, IDC_HEADER_OFFSETS, WM_SETFONT, (WPARAM)g_hHeaderFont, TRUE);
+						SendDlgItemMessage(hDlg, IDC_HEADER_SPAWNS, WM_SETFONT, (WPARAM)g_hHeaderFont, TRUE);
+						SendDlgItemMessage(hDlg, IDC_HEADER_LOG, WM_SETFONT, (WPARAM)g_hHeaderFont, TRUE);
+					}
+				}
+			}
+
+			SetTimer(hDlg, IDT_STATUS_HEARTBEAT, STATUS_HEARTBEAT_INTERVAL_MS, NULL);
+
 			return (INT_PTR)TRUE;
+		case WM_TIMER:
+			if (wParam == IDT_STATUS_HEARTBEAT)
+			{
+				if (server_status == 2 && (GetTickCount64() - lastDataTick) > STATUS_STALE_THRESHOLD_MS)
+				{
+					server_status = 3;
+					SetDlgItemText(hDlg, IDC_TEXT_STATUS, "Connected (stale)");
+				}
+			}
+			break;
+		case WM_DESTROY:
+			KillTimer(hDlg, IDT_STATUS_HEARTBEAT);
+			if (g_hHeaderFont)
+			{
+				DeleteObject(g_hHeaderFont);
+				g_hHeaderFont = NULL;
+			}
+			break;
 		case WM_CTLCOLORDLG:
 			return (INT_PTR)g_hbrBackground;
 		case WM_CTLCOLORSTATIC:
@@ -906,6 +975,8 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 					else if (server_status == 1) // Listening - Blue
 												 // or Connected and no eqgame.exe found
 						SetTextColor(hdcStatic, RGB(0, 0, 255));
+					else if (server_status == 3) // Connected but gone quiet - Orange
+						SetTextColor(hdcStatic, RGB(255, 140, 0));
 					else // connected with EQGame - Green
 						SetTextColor(hdcStatic, RGB(0, 255, 0));
 					break;
@@ -917,12 +988,49 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 		}
 		break;
 		case WM_COMMAND:
-			if (LOWORD(wParam) == IDCLOSE || LOWORD(wParam) == IDCANCEL)
+			if (LOWORD(wParam) == IDCLOSE || LOWORD(wParam) == IDCANCEL || LOWORD(wParam) == IDM_EXIT)
 			{
 				EndDialog(hDlg, LOWORD(wParam));
 				running = false;
 				FreeConsole();
 				return (INT_PTR)FALSE;
+			}
+			if (LOWORD(wParam) == IDM_ABOUT)
+			{
+				DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hDlg, AboutDialog);
+			}
+			if (LOWORD(wParam) == IDM_DEBUG_CONSOLE)
+			{
+				// Launch a second instance of this exe in debug mode. A separate
+				// process (rather than an in-process console) means closing its
+				// window only ends that process — Windows won't touch this one —
+				// with no special close-handling needed, and its own MemReader
+				// attach can't collide with this server's.
+				TCHAR appPath[MAX_PATH + 1];
+				GetModuleFileName(NULL, appPath, MAX_PATH);
+
+				_putenv_s("MYSEQ_DEBUG_CONSOLE", "1");
+
+				STARTUPINFO debugStartupInfo;
+				PROCESS_INFORMATION debugProcessInfo;
+				memset(&debugStartupInfo, 0, sizeof(debugStartupInfo));
+				memset(&debugProcessInfo, 0, sizeof(debugProcessInfo));
+				debugStartupInfo.cb = sizeof(debugStartupInfo);
+
+				BOOL launched = CreateProcess(appPath, NULL, 0, 0, FALSE, CREATE_DEFAULT_ERROR_MODE,
+					0, 0, &debugStartupInfo, &debugProcessInfo);
+
+				_putenv_s("MYSEQ_DEBUG_CONSOLE", "");
+
+				if (launched)
+				{
+					CloseHandle(debugProcessInfo.hProcess);
+					CloseHandle(debugProcessInfo.hThread);
+				}
+				else
+				{
+					netServer.logEvent("Failed to launch debug console.");
+				}
 			}
 			if (LOWORD(wParam) == IDC_BUTTON1)
 			{
@@ -967,18 +1075,32 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 			if (LOWORD(wParam) == IDC_BUTTON2)
 			{
 				// reload offsets
-				iniReader.openFile(iniFile);
-				iniReader.openConfigFile(configIniFile);
-				netServer.init(&iniReader);
+				try
+				{
+					iniReader.openFile(iniFile);
+					iniReader.openConfigFile(configIniFile);
+					iniReader.openOffsetsFile(offsetsIniFile);
+					netServer.init(&iniReader);
 
-				// close and reopen listener socket, in case port changed
-				netServer.closeListenerSocket();
-				running = netServer.openListenerSocket(false);
+					// close and reopen listener socket, in case port changed
+					netServer.closeListenerSocket();
+					running = netServer.openListenerSocket(false);
 
-				// update patch date in GUI
-				LPCSTR patchdate;
-				patchdate = iniReader.patchDate.c_str();
-				SetDlgItemText(h_MySEQServer, IDC_TEXT_PATCH, patchdate);
+					// update patch date in GUI
+					LPCSTR patchdate;
+					patchdate = iniReader.patchDate.c_str();
+					SetDlgItemText(h_MySEQServer, IDC_TEXT_PATCH, patchdate);
+
+					if (running)
+						netServer.logEvent("Reload: offsets and config reloaded successfully");
+					else
+						netServer.logEvent("Reload: config reloaded, but the listener failed to reopen (check the port)");
+				}
+				catch (Exception& ex)
+				{
+					netServer.logEvent("Reload failed: " + string(ex));
+					running = false;
+				}
 			}
 			if (LOWORD(wParam) == IDC_BUTTON3)
 			{
@@ -993,18 +1115,29 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 			break;
 
 		case WM_SYSCOMMAND:
-			switch (wParam)
+			switch (wParam & 0xFFF0)
 			{
 				case SC_MINIMIZE:
-				{
-					// do stuff
 					Minimize();
 					return (INT_PTR)TRUE;
-					break;
-				}
+				case SC_CLOSE:
+					// The titlebar X, Alt+F4, and the system menu's Close all
+					// route here. Minimize to tray instead of letting the
+					// default handling destroy the window -- otherwise the
+					// server keeps running as a windowless, tray-icon-less
+					// background process with no way to bring the UI back.
+					Minimize();
+					return (INT_PTR)TRUE;
 				default:
 					break;
 			}
+			break;
+
+		case WM_CLOSE:
+			// Belt-and-suspenders for any WM_CLOSE that arrives without going
+			// through WM_SYSCOMMAND/SC_CLOSE above.
+			Minimize();
+			return (INT_PTR)TRUE;
 
 		case WM_TRAYICON:
 		{
@@ -1078,6 +1211,24 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 	return (INT_PTR)FALSE;
 }
 
+// Message handler for the About dialog, shown from the server dialog's Help menu.
+INT_PTR CALLBACK AboutDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM)
+{
+	switch (message)
+	{
+		case WM_INITDIALOG:
+			return (INT_PTR)TRUE;
+		case WM_COMMAND:
+			if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+			{
+				EndDialog(hDlg, LOWORD(wParam));
+				return (INT_PTR)TRUE;
+			}
+			break;
+	}
+	return (INT_PTR)FALSE;
+}
+
 // Checks whether <baseDir><subPath>\eqgame.exe exists (subPath must begin
 // with a path separator, e.g. "\\sony\\everquest", or be empty to check
 // baseDir itself). On success, fills outExePath with the full path to
@@ -1111,6 +1262,54 @@ static bool TryEqGamePath(const TCHAR* baseDir, const TCHAR* subPath, TCHAR* out
 	return true;
 }
 
+// Shows a wait cursor and disables the Offset Finder's scan/write buttons for
+// as long as a scan is running, so a click registers visibly even though the
+// scan itself runs synchronously on the dialog's thread. IDC_BUTTON2 ("Write
+// Offsets to ini file") is disabled here too but deliberately never
+// re-enabled on destruction - its enabled state is scan-result-dependent
+// (EQGameScanner::ScanExecutable only turns it on when a scanned offset
+// actually differs from the ini file), not something to force back on.
+class ScopedScanCursor
+{
+public:
+	explicit ScopedScanCursor(HWND dlg) :
+		hDlg(dlg)
+	{
+		previousCursor = SetCursor(LoadCursor(NULL, IDC_WAIT));
+		EnableWindow(GetDlgItem(hDlg, IDOK), FALSE);
+		EnableWindow(GetDlgItem(hDlg, IDC_BUTTON2), FALSE);
+		EnableWindow(GetDlgItem(hDlg, IDC_BUTTON3), FALSE);
+	}
+
+	~ScopedScanCursor()
+	{
+		SetCursor(previousCursor);
+		EnableWindow(GetDlgItem(hDlg, IDOK), TRUE);
+		EnableWindow(GetDlgItem(hDlg, IDC_BUTTON3), TRUE);
+	}
+
+	ScopedScanCursor(const ScopedScanCursor&)			 = delete;
+	ScopedScanCursor& operator=(const ScopedScanCursor&) = delete;
+
+private:
+	HWND hDlg;
+	HCURSOR previousCursor;
+};
+
+// "Write Offsets to ini file" only enables itself once a primary-offset scan
+// finds a value that differs from the ini (see EQGameScanner::ScanExecutable)
+// - nothing in the dialog explained that relationship, so the button just
+// looked permanently greyed out. Spells it out in the status line instead.
+static void UpdateOffsetScanStatus(HWND hDlg)
+{
+	if (!scanner.executableExists())
+		SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Scan failed - see the log above for details.");
+	else if (IsWindowEnabled(GetDlgItem(hDlg, IDC_BUTTON2)))
+		SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Offsets differ from the ini file - click \"Write Offsets to ini file\" to update.");
+	else
+		SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Offsets already match the ini file. Nothing to write.");
+}
+
 INT_PTR CALLBACK OffsetDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM)
 {
 	switch (message)
@@ -1123,9 +1322,7 @@ INT_PTR CALLBACK OffsetDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM)
 				TCHAR basePath[_MAX_PATH];
 				if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_PROGRAM_FILES, NULL, 0, basePath)))
 				{
-					TryEqGamePath(basePath, "\\sony\\everquest", NULL, eqFileName, NULL)
-						|| TryEqGamePath(basePath, "\\soe\\everquest", NULL, eqFileName, NULL)
-						|| TryEqGamePath(basePath, "\\everquest", NULL, eqFileName, NULL);
+					TryEqGamePath(basePath, "\\sony\\everquest", NULL, eqFileName, NULL) || TryEqGamePath(basePath, "\\soe\\everquest", NULL, eqFileName, NULL) || TryEqGamePath(basePath, "\\everquest", NULL, eqFileName, NULL);
 				}
 			}
 
@@ -1139,11 +1336,21 @@ INT_PTR CALLBACK OffsetDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM)
 			switch (LOWORD(wParam))
 			{
 				case IDOK:
+				{
+					// The scan itself is fast (one bulk read of the exe file off
+					// disk plus an in-memory byte search), but it still runs
+					// synchronously on this thread, so give some feedback that a
+					// click was registered rather than the dialog looking frozen.
+					ScopedScanCursor scanCursor(hDlg);
 					scanner.setExe(eqFileName);
 					scanner.ScanExecutable(hDlg, &iniReader, &netServer);
+					UpdateOffsetScanStatus(hDlg);
 					// EndDialog(hDlg, IDOK);
 					break;
+				}
 				case IDC_BUTTON2:
+				{
+					ScopedScanCursor scanCursor(hDlg);
 					scanner.setExe(eqFileName);
 					if (scanner.ScanExecutable(hDlg, &iniReader, &netServer, true))
 					{
@@ -1159,14 +1366,27 @@ INT_PTR CALLBACK OffsetDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM)
 						LPCSTR patchdate;
 						patchdate = iniReader.patchDate.c_str();
 						SetDlgItemText(h_MySEQServer, IDC_TEXT_PATCH, patchdate);
+						SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Offsets written to the ini file and reloaded.");
 						// EndDialog(hDlg, IDC_BUTTON2);
 					}
+					else
+					{
+						SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Nothing was written - see the log above for details.");
+					}
 					break;
+				}
 				case IDC_BUTTON3:
+				{
+					ScopedScanCursor scanCursor(hDlg);
 					scanner.setExe(eqFileName);
 					scanner.ScanSecondary(hDlg, &iniReader, &netServer);
+					if (!scanner.executableExists())
+						SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Scan failed - see the log above for details.");
+					else
+						SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Secondary offsets scanned (read-only) - see the log above for details.");
 					// EndDialog(hDlg, IDOK);
 					break;
+				}
 				case IDCANCEL:
 					EndDialog(hDlg, IDCANCEL);
 					break;
@@ -1193,10 +1413,7 @@ INT_PTR CALLBACK OffsetDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM)
 						TCHAR basePath[_MAX_PATH];
 						if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_PROGRAM_FILES, NULL, 0, basePath)))
 						{
-							TryEqGamePath(basePath, "\\Sony Online Entertainment\\Installed Games\\EverQuest", eqFilePath, eqFileName, eqExeName)
-								|| TryEqGamePath(basePath, "\\sony\\everquest", eqFilePath, eqFileName, eqExeName)
-								|| TryEqGamePath(basePath, "\\soe\\everquest", eqFilePath, eqFileName, eqExeName)
-								|| TryEqGamePath(basePath, "\\everquest", eqFilePath, eqFileName, eqExeName);
+							TryEqGamePath(basePath, "\\Sony Online Entertainment\\Installed Games\\EverQuest", eqFilePath, eqFileName, eqExeName) || TryEqGamePath(basePath, "\\sony\\everquest", eqFilePath, eqFileName, eqExeName) || TryEqGamePath(basePath, "\\soe\\everquest", eqFilePath, eqFileName, eqExeName) || TryEqGamePath(basePath, "\\everquest", eqFilePath, eqFileName, eqExeName);
 						}
 						if (eqExeName[0] == _T('\0'))
 						{
@@ -1243,9 +1460,6 @@ void ReadArgs(int argc, char* argv[])
 
 		arg = argv[1];
 
-	debug_mode = (arg == "debug");
-	debug_mode = FALSE;
-
 	console_mode = (arg == "console");
 
 	services = (arg == "-k");
@@ -1270,6 +1484,8 @@ void ReadArgs(int argc, char* argv[])
 		}
 		GetCurrentDirectory(_MAX_PATH, configIniFile);
 		strcat_s(configIniFile, "\\config.ini");
+		GetCurrentDirectory(_MAX_PATH, offsetsIniFile);
+		strcat_s(offsetsIniFile, "\\offsets.ini");
 	}
 	else if (arg == "-k")
 	{
@@ -1281,9 +1497,11 @@ void ReadArgs(int argc, char* argv[])
 		mypath					= string(AppPath).substr(0, index);
 		string(mypath)._Copy_s(iniFile, MAX_PATH, index, 0);
 		string(mypath)._Copy_s(configIniFile, _MAX_PATH, index, 0);
+		string(mypath)._Copy_s(offsetsIniFile, _MAX_PATH, index, 0);
 
 		strcat_s(iniFile, "\\myseqserver.ini");
 		strcat_s(configIniFile, "\\config.ini");
+		strcat_s(offsetsIniFile, "\\offsets.ini");
 
 #ifdef _DEBUG_CONSOLE
 
@@ -1312,12 +1530,20 @@ void ReadArgs(int argc, char* argv[])
 		mypath					= string(AppPath).substr(0, index);
 		string(mypath)._Copy_s(iniFile, MAX_PATH, index, 0);
 		string(mypath)._Copy_s(configIniFile, _MAX_PATH, index, 0);
+		string(mypath)._Copy_s(offsetsIniFile, _MAX_PATH, index, 0);
 
 		strcat_s(iniFile, "\\myseqserver.ini");
 		strcat_s(configIniFile, "\\config.ini");
+		strcat_s(offsetsIniFile, "\\offsets.ini");
 	}
 }
 
+// Entry point for a second instance of this exe launched in debug mode (see
+// MYSEQ_DEBUG_CONSOLE in WinMain), run on its own thread while the main
+// thread pumps the hidden window's message loop. Exits this whole (separate)
+// process when the REPL ends — closing the console window itself is enough
+// to do that (see the debug_mode branch in InitInstance/WinMain), since
+// there's no server or GUI dialog in this process to keep alive.
 void DoDebugLoop(void*)
 {
 	debugger.enterDebugLoop(&memReader, &iniReader);
@@ -1349,8 +1575,10 @@ void Restore()
 	// Remove the icon from the system tray
 	Shell_NotifyIcon(NIM_DELETE, &g_notifyIconData);
 
-	// ..and show the window
+	// ..and show the window, bringing it to the front so restoring from
+	// the tray doesn't leave it sitting behind other windows.
 	ShowWindow(h_MySEQServer, SW_SHOW);
+	SetForegroundWindow(h_MySEQServer);
 }
 
 void ToggleStartMinimized()

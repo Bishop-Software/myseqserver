@@ -30,7 +30,12 @@
 #define RTDEBUG(...) if (debug) cout << __VA_ARGS__ << endl
 // clang-format on
 
-#define TO_LOWER(str) (transform(str.begin(), str.end(), str.begin(), (int (*)(int))tolower))
+// tolower() is only well-defined for values representable as unsigned char
+// (or EOF); casting to unsigned char before the call (rather than just
+// casting tolower's signature to match transform's expected type) avoids
+// undefined behavior on platforms where char is signed and the string has
+// extended-ASCII bytes.
+#define TO_LOWER(str) (transform((str).begin(), (str).end(), (str).begin(), [](unsigned char c) { return static_cast<char>(tolower(c)); }))
 
 // Buffer size used by extractString/extractString2 for reading short,
 // null-terminated names (spawn names, zone names, etc.) out of the target
@@ -100,20 +105,20 @@ void MemReader::enableDebugPrivileges()
 
 	LUID ALUID;
 
-	HANDLE hToken;
+	HANDLE hTokenRaw;
 
 	DWORD Bufferlen;
 
-	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken))
+	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hTokenRaw))
 	{
 		cout << "MemReader: OpenProcessToken failed, error " << GetLastError() << endl;
 		return;
 	}
+	ScopedHandle hToken(hTokenRaw);
 
 	if (!LookupPrivilegeValue(NULL, SE_DEBUG_NAME, &ALUID))
 	{
 		cout << "MemReader: LookupPrivilegeValue failed, error " << GetLastError() << endl;
-		CloseHandle(hToken);
 		return;
 	}
 
@@ -123,12 +128,10 @@ void MemReader::enableDebugPrivileges()
 
 	TP.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
 
-	if (!AdjustTokenPrivileges(hToken, false, &TP, sizeof(OldTP), &OldTP, &Bufferlen))
+	if (!AdjustTokenPrivileges(hToken.get(), false, &TP, sizeof(OldTP), &OldTP, &Bufferlen))
 	{
 		cout << "MemReader: AdjustTokenPrivileges failed, error " << GetLastError() << endl;
 	}
-
-	CloseHandle(hToken);
 }
 
 /* Find the first process to match the given filename */
@@ -161,8 +164,6 @@ bool MemReader::openProcess(string filename, bool first, bool debug)
 
 {
 
-	HANDLE hProcessSnap = NULL;
-
 	PROCESSENTRY32 pe32 = {};
 
 	bool okToAttach = first;
@@ -179,13 +180,13 @@ bool MemReader::openProcess(string filename, bool first, bool debug)
 
 	//  Take a snapshot of all processes in the system.
 
-	hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	ScopedHandle hProcessSnap(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0), INVALID_HANDLE_VALUE);
 
-	RTDEBUG("hProcessSnap is 0x" << hex << hProcessSnap);
+	RTDEBUG("hProcessSnap is 0x" << hex << hProcessSnap.get());
 
 	// Walk thru each process looking for the given filename
 
-	if (hProcessSnap != INVALID_HANDLE_VALUE && Process32First(hProcessSnap, &pe32))
+	if (hProcessSnap.valid() && Process32First(hProcessSnap.get(), &pe32))
 
 	{
 
@@ -226,7 +227,9 @@ bool MemReader::openProcess(string filename, bool first, bool debug)
 
 				RTDEBUG("->Match found (PID:0x" << pe32.th32ProcessID << "). Attempting to attach...");
 
-				if (OpenProcess(PROCESS_VM_READ | PROCESS_QUERY_INFORMATION, false, pe32.th32ProcessID))
+				HANDLE hCandidate = OpenProcess(PROCESS_VM_READ | PROCESS_QUERY_INFORMATION, false, pe32.th32ProcessID);
+
+				if (hCandidate)
 
 				{
 
@@ -236,7 +239,7 @@ bool MemReader::openProcess(string filename, bool first, bool debug)
 
 					currentEQProcessID = pe32.th32ProcessID;
 
-					currentEQProcessHandle = OpenProcess(PROCESS_VM_READ | PROCESS_QUERY_INFORMATION, false, currentEQProcessID);
+					currentEQProcessHandle = hCandidate;
 
 					currentEQProcessBaseAddress = GetModuleBaseAddress(pe32.th32ProcessID, pe32.szExeFile);
 
@@ -265,11 +268,8 @@ bool MemReader::openProcess(string filename, bool first, bool debug)
 
 		}
 
-		while (hProcessSnap != INVALID_HANDLE_VALUE && Process32Next(hProcessSnap, &pe32));
+		while (hProcessSnap.valid() && Process32Next(hProcessSnap.get(), &pe32));
 	}
-
-	if (hProcessSnap != NULL && hProcessSnap != INVALID_HANDLE_VALUE)
-		CloseHandle(hProcessSnap);
 
 	if (rtn)
 		cout << "MemReader: Found process ID " << dec << currentEQProcessID << " Base Address: 0x" << hex << currentEQProcessBaseAddress << endl;
@@ -309,8 +309,6 @@ bool MemReader::validateProcess(bool forceCheck)
 
 	{
 
-		HANDLE hProcessSnap = NULL;
-
 		PROCESSENTRY32 pe32 = {};
 
 		stillValid = false;
@@ -321,11 +319,11 @@ bool MemReader::validateProcess(bool forceCheck)
 
 		//  Take a snapshot of all processes in the system.
 
-		hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+		ScopedHandle hProcessSnap(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0), INVALID_HANDLE_VALUE);
 
 		// Walk thru each process looking for the process ID we had before
 
-		if (hProcessSnap != INVALID_HANDLE_VALUE && Process32First(hProcessSnap, &pe32))
+		if (hProcessSnap.valid() && Process32First(hProcessSnap.get(), &pe32))
 
 		{
 
@@ -353,11 +351,8 @@ bool MemReader::validateProcess(bool forceCheck)
 
 			}
 
-			while (Process32Next(hProcessSnap, &pe32));
+			while (Process32Next(hProcessSnap.get(), &pe32));
 		}
-
-		if (hProcessSnap != INVALID_HANDLE_VALUE)
-			CloseHandle(hProcessSnap);
 
 		if (!stillValid)
 
@@ -485,28 +480,25 @@ UINT MemReader::extractUINT(QWORD offset)
 
 QWORD MemReader::GetModuleBaseAddress(DWORD iProcId, TCHAR* DLLName)
 {
-	HANDLE hSnap;		   // Process snapshot handle.
 	MODULEENTRY32 xModule; // Module information structure.
 
-	if ((hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, iProcId)) == INVALID_HANDLE_VALUE) // Creates a module
+	ScopedHandle hSnap(CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, iProcId), INVALID_HANDLE_VALUE); // Creates a module snapshot.
+	if (!hSnap.valid())
 		return 0;
 
 	xModule.dwSize = sizeof(MODULEENTRY32); // Needed for Module32First/Next to work.
 
-	BOOL bModule = Module32First(hSnap, &xModule);
+	BOOL bModule = Module32First(hSnap.get(), &xModule);
 	while (bModule)
 	{
 
 		if (lstrcmpi(xModule.szModule, DLLName) == 0) // If this is the module we want...
 		{
-			CloseHandle(hSnap);				   // Free the handle.
 			return (QWORD)xModule.modBaseAddr; // return the base address.
 		}
 
-		bModule = Module32Next(hSnap, &xModule); // Loops through the rest of the modules.
+		bModule = Module32Next(hSnap.get(), &xModule); // Loops through the rest of the modules.
 	}
-
-	CloseHandle(hSnap); // Free the handle.
 
 	return 0; // If the result of the function is 0, it didn't find the base address.
 }

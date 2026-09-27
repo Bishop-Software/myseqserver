@@ -67,7 +67,10 @@ public:
 
 	string offsetNames[OT_max];
 
-	char* rawBuffer{};
+	// mutable: the const extractRaw* accessors below index into this buffer
+	// via reinterpret_cast, matching the non-const pointee semantics the
+	// previous raw char* member had even when accessed from a const method.
+	mutable vector<char> rawBuffer;
 
 	itemBuffer_t tempItemBuffer;
 
@@ -112,9 +115,8 @@ private:
 
 public:
 	Item();
-	~Item();
 
-	Item(const Item&) = delete;
+	Item(const Item&)			 = delete;
 	Item& operator=(const Item&) = delete;
 
 	void init(IniReaderInterface* ir_intf);

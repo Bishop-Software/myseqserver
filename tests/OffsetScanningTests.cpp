@@ -27,32 +27,32 @@
 
 namespace
 {
-int g_checks	= 0;
-int g_failures	= 0;
+int g_checks   = 0;
+int g_failures = 0;
 
-#define CHECK_EQ(actual, expected)                                                                        \
-	do                                                                                                     \
-	{                                                                                                      \
-		++g_checks;                                                                                       \
-		QWORD _a = (QWORD)(actual);                                                                       \
-		QWORD _e = (QWORD)(expected);                                                                     \
-		if (_a != _e)                                                                                     \
-		{                                                                                                 \
-			++g_failures;                                                                                 \
-			std::cout << "FAIL " << __LINE__ << ": " << #actual << " == " << #expected << " (got 0x"      \
-					  << std::hex << _a << ", expected 0x" << _e << std::dec << ")" << std::endl;          \
-		}                                                                                                  \
+#define CHECK_EQ(actual, expected)                                                                   \
+	do                                                                                               \
+	{                                                                                                \
+		++g_checks;                                                                                  \
+		QWORD _a = (QWORD)(actual);                                                                  \
+		QWORD _e = (QWORD)(expected);                                                                \
+		if (_a != _e)                                                                                \
+		{                                                                                            \
+			++g_failures;                                                                            \
+			std::cout << "FAIL " << __LINE__ << ": " << #actual << " == " << #expected << " (got 0x" \
+					  << std::hex << _a << ", expected 0x" << _e << std::dec << ")" << std::endl;    \
+		}                                                                                            \
 	} while (0)
 
-#define CHECK(cond)                                                                                       \
-	do                                                                                                     \
-	{                                                                                                      \
-		++g_checks;                                                                                       \
-		if (!(cond))                                                                                      \
-		{                                                                                                 \
-			++g_failures;                                                                                 \
-			std::cout << "FAIL " << __LINE__ << ": " << #cond << std::endl;                                \
-		}                                                                                                  \
+#define CHECK(cond)                                                         \
+	do                                                                      \
+	{                                                                       \
+		++g_checks;                                                         \
+		if (!(cond))                                                        \
+		{                                                                   \
+			++g_failures;                                                   \
+			std::cout << "FAIL " << __LINE__ << ": " << #cond << std::endl; \
+		}                                                                   \
 	} while (0)
 
 std::string MakeTempFilePath(const char* suffix)
@@ -85,12 +85,12 @@ std::vector<BYTE> BuildSyntheticPE(QWORD imageBase, QWORD sectionRVA, QWORD sect
 {
 	std::vector<BYTE> buf((size_t)(sectionFileOffset + sectionFileSize), 0);
 
-	buf[0] = 'M';
-	buf[1] = 'Z';
+	buf[0]		   = 'M';
+	buf[1]		   = 'Z';
 	DWORD e_lfanew = 0x80;
 	memcpy(&buf[0x3C], &e_lfanew, sizeof(e_lfanew));
 
-	size_t pos	= e_lfanew;
+	size_t pos	 = e_lfanew;
 	buf[pos + 0] = 'P';
 	buf[pos + 1] = 'E';
 	buf[pos + 2] = 0;
@@ -105,7 +105,7 @@ std::vector<BYTE> BuildSyntheticPE(QWORD imageBase, QWORD sectionRVA, QWORD sect
 	pos = coffStart + 20;
 
 	size_t optHeaderStart = pos;
-	WORD magic			   = 0x20B; // PE32+
+	WORD magic			  = 0x20B; // PE32+
 	memcpy(&buf[optHeaderStart], &magic, sizeof(magic));
 	memcpy(&buf[optHeaderStart + 24], &imageBase, sizeof(imageBase));
 
@@ -128,24 +128,24 @@ std::vector<BYTE> BuildSyntheticPE(QWORD imageBase, QWORD sectionRVA, QWORD sect
 	return buf;
 }
 
-const QWORD kImageBase	  = 0x140000000ULL;
-const QWORD kSectionRVA	  = 0x1000;
-const QWORD kSectionVSize = 0x2000;
-const QWORD kSectionStart = 0x400; // matches this repo's own config.ini convention
-const QWORD kSectionSize  = 0x2000;
+const QWORD kImageBase		 = 0x140000000ULL;
+const QWORD kSectionRVA		 = 0x1000;
+const QWORD kSectionVSize	 = 0x2000;
+const QWORD kSectionStart	 = 0x400; // matches this repo's own config.ini convention
+const QWORD kSectionSize	 = 0x2000;
 const std::size_t kBlockSize = 0x2000;
 
 void TestFindEQPointerOffset_WildcardAndByteCapture(EQGameScanner& scanner)
 {
 	// x?xt: byte0 exact, byte1 wildcarded, byte2 exact, byte3 captured (typelen=1).
 	std::vector<std::pair<QWORD, std::vector<BYTE>>> patches = {
-		{ 0x420, { 0xAA, 0x77, 0xBB, 0x2A } },
+		{0x420, {0xAA, 0x77, 0xBB, 0x2A}},
 	};
-	auto pe = BuildSyntheticPE(kImageBase, kSectionRVA, kSectionVSize, kSectionStart, kSectionSize, patches);
+	auto pe	  = BuildSyntheticPE(kImageBase, kSectionRVA, kSectionVSize, kSectionStart, kSectionSize, patches);
 	auto path = MakeTempFilePath(".exe");
 	WriteBinaryFile(path, pe);
 
-	BYTE byteMask[] = { 0xAA, 0x00, 0xBB, 0x2A };
+	BYTE byteMask[] = {0xAA, 0x00, 0xBB, 0x2A};
 	char charMask[] = "x?xt";
 	scanner.setExe((TCHAR*)path.c_str());
 	QWORD result = scanner.findEQPointerOffset(kSectionStart, kBlockSize, byteMask, charMask);
@@ -157,13 +157,13 @@ void TestFindEQPointerOffset_WildcardAndByteCapture(EQGameScanner& scanner)
 void TestFindEQPointerOffset_DWordCapture(EQGameScanner& scanner)
 {
 	std::vector<std::pair<QWORD, std::vector<BYTE>>> patches = {
-		{ 0x430, { 0x11, 0x22, 0x33, 0x44, 0x78, 0x56, 0x34, 0x12, 0x99 } },
+		{0x430, {0x11, 0x22, 0x33, 0x44, 0x78, 0x56, 0x34, 0x12, 0x99}},
 	};
 	auto pe	  = BuildSyntheticPE(kImageBase, kSectionRVA, kSectionVSize, kSectionStart, kSectionSize, patches);
 	auto path = MakeTempFilePath(".exe");
 	WriteBinaryFile(path, pe);
 
-	BYTE byteMask[] = { 0x11, 0x22, 0x33, 0x44, 0x00, 0x00, 0x00, 0x00, 0x99 };
+	BYTE byteMask[] = {0x11, 0x22, 0x33, 0x44, 0x00, 0x00, 0x00, 0x00, 0x99};
 	char charMask[] = "xxxxttttx";
 	scanner.setExe((TCHAR*)path.c_str());
 	QWORD result = scanner.findEQPointerOffset(kSectionStart, kBlockSize, byteMask, charMask);
@@ -179,7 +179,7 @@ void TestFindEQPointerOffset_NoMatchReturnsZero(EQGameScanner& scanner)
 	auto path = MakeTempFilePath(".exe");
 	WriteBinaryFile(path, pe);
 
-	BYTE byteMask[] = { 0xDE, 0xAD, 0xBE, 0xEF };
+	BYTE byteMask[] = {0xDE, 0xAD, 0xBE, 0xEF};
 	char charMask[] = "xxxx";
 	scanner.setExe((TCHAR*)path.c_str());
 	QWORD result = scanner.findEQPointerOffset(kSectionStart, kBlockSize, byteMask, charMask);
@@ -194,13 +194,13 @@ void TestFindEQPointerOffset_ImplausibleValueIsRejected(EQGameScanner& scanner)
 	// >= 536870912, so findEQPointerOffset's plausibility filter should
 	// discard this match; since it's the only candidate, the result is 0.
 	std::vector<std::pair<QWORD, std::vector<BYTE>>> patches = {
-		{ 0x440, { 0x55, 0x66, 0x00, 0x00, 0x00, 0x30, 0x77 } },
+		{0x440, {0x55, 0x66, 0x00, 0x00, 0x00, 0x30, 0x77}},
 	};
 	auto pe	  = BuildSyntheticPE(kImageBase, kSectionRVA, kSectionVSize, kSectionStart, kSectionSize, patches);
 	auto path = MakeTempFilePath(".exe");
 	WriteBinaryFile(path, pe);
 
-	BYTE byteMask[] = { 0x55, 0x66, 0x00, 0x00, 0x00, 0x00, 0x77 };
+	BYTE byteMask[] = {0x55, 0x66, 0x00, 0x00, 0x00, 0x00, 0x77};
 	char charMask[] = "xxttttx";
 	scanner.setExe((TCHAR*)path.c_str());
 	QWORD result = scanner.findEQPointerOffset(kSectionStart, kBlockSize, byteMask, charMask);
@@ -215,13 +215,13 @@ void TestFindEQAbsolutePointer_ResolvesRipRelative(EQGameScanner& scanner)
 	// immediately followed by another instruction. disp32=0x500 is chosen
 	// so the resolved address lands inside the synthetic section.
 	std::vector<std::pair<QWORD, std::vector<BYTE>>> patches = {
-		{ 0x410, { 0x01, 0x48, 0x89, 0x1D, 0x00, 0x05, 0x00, 0x00, 0x48, 0x8B, 0x01, 0xFF } },
+		{0x410, {0x01, 0x48, 0x89, 0x1D, 0x00, 0x05, 0x00, 0x00, 0x48, 0x8B, 0x01, 0xFF}},
 	};
 	auto pe	  = BuildSyntheticPE(kImageBase, kSectionRVA, kSectionVSize, kSectionStart, kSectionSize, patches);
 	auto path = MakeTempFilePath(".exe");
 	WriteBinaryFile(path, pe);
 
-	BYTE byteMask[] = { 0x01, 0x48, 0x89, 0x1D, 0x00, 0x00, 0x00, 0x00, 0x48, 0x8B, 0x01, 0xFF };
+	BYTE byteMask[] = {0x01, 0x48, 0x89, 0x1D, 0x00, 0x00, 0x00, 0x00, 0x48, 0x8B, 0x01, 0xFF};
 	char charMask[] = "xxxxttttxxxx";
 	scanner.setExe((TCHAR*)path.c_str());
 	QWORD result = scanner.findEQAbsolutePointer(kSectionStart, kBlockSize, byteMask, charMask);
@@ -236,13 +236,13 @@ void TestFindEQAbsolutePointer_RejectsResolutionOutsideMappedSection(EQGameScann
 	// the synthetic section's end - this must be rejected as a likely
 	// coincidental byte match rather than a genuine RIP-relative reference.
 	std::vector<std::pair<QWORD, std::vector<BYTE>>> patches = {
-		{ 0x450, { 0x02, 0x49, 0x8A, 0x1E, 0x00, 0x00, 0x50, 0x00, 0x49, 0x8C, 0x02, 0xFE } },
+		{0x450, {0x02, 0x49, 0x8A, 0x1E, 0x00, 0x00, 0x50, 0x00, 0x49, 0x8C, 0x02, 0xFE}},
 	};
 	auto pe	  = BuildSyntheticPE(kImageBase, kSectionRVA, kSectionVSize, kSectionStart, kSectionSize, patches);
 	auto path = MakeTempFilePath(".exe");
 	WriteBinaryFile(path, pe);
 
-	BYTE byteMask[] = { 0x02, 0x49, 0x8A, 0x1E, 0x00, 0x00, 0x00, 0x00, 0x49, 0x8C, 0x02, 0xFE };
+	BYTE byteMask[] = {0x02, 0x49, 0x8A, 0x1E, 0x00, 0x00, 0x00, 0x00, 0x49, 0x8C, 0x02, 0xFE};
 	char charMask[] = "xxxxttttxxxx";
 	scanner.setExe((TCHAR*)path.c_str());
 	QWORD result = scanner.findEQAbsolutePointer(kSectionStart, kBlockSize, byteMask, charMask);
@@ -259,7 +259,7 @@ void TestFindEQAbsolutePointer_NonPEFileReturnsZero(EQGameScanner& scanner)
 	auto path = MakeTempFilePath(".exe");
 	WriteBinaryFile(path, notAPE);
 
-	BYTE byteMask[] = { 0x01, 0x02, 0x03, 0x04 };
+	BYTE byteMask[] = {0x01, 0x02, 0x03, 0x04};
 	char charMask[] = "xxtt";
 	scanner.setExe((TCHAR*)path.c_str());
 	QWORD result = scanner.findEQAbsolutePointer(0, 0x100, byteMask, charMask);
@@ -276,14 +276,14 @@ void TestReadEscapeStrings_DecodesRealPatternShape(IniReader& ini)
 		"Pattern=\\x01\\x48\\x89\\x1D\\x00\\x05\\x00\\x00\\x48\\x8B\\x01\\xFF\r\n"
 		"Mask=xxxxttttxxxx\r\n");
 
-	ini.openConfigFile(path);
+	ini.openOffsetsFile(path);
 	std::string decoded = ini.readEscapeStrings("TestZoneAddr", "Pattern");
-	std::string mask	 = ini.readStringEntry("TestZoneAddr", "Mask", true);
+	std::string mask	= ini.readStringEntry("TestZoneAddr", "Mask", true);
 
-	const BYTE expected[] = { 0x01, 0x48, 0x89, 0x1D, 0x00, 0x05, 0x00, 0x00, 0x48, 0x8B, 0x01, 0xFF };
+	const BYTE expected[] = {0x01, 0x48, 0x89, 0x1D, 0x00, 0x05, 0x00, 0x00, 0x48, 0x8B, 0x01, 0xFF};
 	CHECK_EQ(decoded.size(), sizeof(expected));
 	bool bytesMatch = decoded.size() == sizeof(expected) &&
-		memcmp(decoded.data(), expected, sizeof(expected)) == 0;
+					  memcmp(decoded.data(), expected, sizeof(expected)) == 0;
 	CHECK(bytesMatch);
 	CHECK(mask == "xxxxttttxxxx");
 
@@ -300,13 +300,13 @@ void TestReadEscapeStrings_MalformedEscapeIsSkippedNotFatal(IniReader& ini)
 		"[TestMalformed]\r\n"
 		"Pattern=\\xAB\\xCd\\x9F\\qXY\\x00\r\n");
 
-	ini.openConfigFile(path);
+	ini.openOffsetsFile(path);
 	std::string decoded = ini.readEscapeStrings("TestMalformed", "Pattern");
 
-	const BYTE expected[] = { 0xAB, 0xCD, 0x9F, 0x00 };
+	const BYTE expected[] = {0xAB, 0xCD, 0x9F, 0x00};
 	CHECK_EQ(decoded.size(), sizeof(expected));
 	bool bytesMatch = decoded.size() == sizeof(expected) &&
-		memcmp(decoded.data(), expected, sizeof(expected)) == 0;
+					  memcmp(decoded.data(), expected, sizeof(expected)) == 0;
 	CHECK(bytesMatch);
 
 	DeleteFileA(path.c_str());

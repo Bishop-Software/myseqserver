@@ -84,11 +84,9 @@ const SpawnInfoOffsetEntry kSpawnInfoOffsets[] = {
 };
 } // namespace
 
-EQGameScanner::EQGameScanner()
-= default;
+EQGameScanner::EQGameScanner() = default;
 
-EQGameScanner::~EQGameScanner()
-= default;
+EQGameScanner::~EQGameScanner() = default;
 void EQGameScanner::setExe(const TCHAR* str)
 {
 	executablePath = str;
@@ -134,44 +132,42 @@ QWORD EQGameScanner::findEQPointerOffset(QWORD startAddress, std::size_t blockSi
 	if (typelen < 1)
 		typelen = 4;
 
-	// Set up our temporary storage variables
-	PBYTE buffer	= new BYTE[blockSize];
+	// Set up our temporary storage variables. Zero-initialized, so no
+	// separate memset is needed.
+	std::vector<BYTE> buffer(blockSize, 0);
 	QWORD matchAddr = 0;
 	bool found		= false;
-
-	// I like clean memory.
-	memset(buffer, 0, blockSize);
 
 	// Move get pointer to the start of the block we want to search
 	// Then attempt to read blockSize to the buffer
 	file.seekg(startAddress, std::ios::beg);
-	file.read((char*)buffer, blockSize);
+	file.read(reinterpret_cast<char*>(buffer.data()), blockSize);
 
 	// Search for a position that fits our masks in memory.
 	// Thanks to dom1n1k for the piece of code this is based off of.
 	for (QWORD i = 0; i < blockSize; ++i)
 	{
-		if (compareData(buffer + i, byteMask, charMask))
+		if (compareData(buffer.data() + i, byteMask, charMask))
 		{
 			QWORD checkRet;
 			matchAddr = i;
 			if (typelen == 1)
 			{
-				BYTE chechbyteRet = *reinterpret_cast<PBYTE>(buffer + matchAddr + tPos);
+				BYTE chechbyteRet = *reinterpret_cast<PBYTE>(buffer.data() + matchAddr + tPos);
 				checkRet		  = (QWORD)chechbyteRet;
 			}
 			else if (typelen == 2)
 			{
-				WORD checkwordRet = *reinterpret_cast<PWORD>(buffer + matchAddr + tPos);
+				WORD checkwordRet = *reinterpret_cast<PWORD>(buffer.data() + matchAddr + tPos);
 				checkRet		  = (QWORD)checkwordRet;
 			}
 			else if (typelen >= 8)
 			{
-				checkRet = *reinterpret_cast<PQWORD>(buffer + matchAddr + tPos);
+				checkRet = *reinterpret_cast<PQWORD>(buffer.data() + matchAddr + tPos);
 			}
 			else
 			{
-				checkRet = *reinterpret_cast<PDWORD>(buffer + matchAddr + tPos);
+				checkRet = *reinterpret_cast<PDWORD>(buffer.data() + matchAddr + tPos);
 			}
 			if (checkRet < 536870912)
 			{
@@ -184,7 +180,6 @@ QWORD EQGameScanner::findEQPointerOffset(QWORD startAddress, std::size_t blockSi
 	// If we didn't find a match, return NULL
 	if (!found)
 	{
-		delete[] buffer;
 		return NULL;
 	}
 
@@ -193,23 +188,22 @@ QWORD EQGameScanner::findEQPointerOffset(QWORD startAddress, std::size_t blockSi
 	// Find where our target address we're searching for is stored, and return its value.
 	if (typelen == 1)
 	{
-		BYTE cRet = *reinterpret_cast<PBYTE>(buffer + matchAddr + tPos);
+		BYTE cRet = *reinterpret_cast<PBYTE>(buffer.data() + matchAddr + tPos);
 		nRet	  = (QWORD)cRet;
 	}
 	else if (typelen == 2)
 	{
-		WORD wRet = *reinterpret_cast<PWORD>(buffer + matchAddr + tPos);
+		WORD wRet = *reinterpret_cast<PWORD>(buffer.data() + matchAddr + tPos);
 		nRet	  = (QWORD)wRet;
 	}
 	else if (typelen >= 8)
 	{
-		nRet = *reinterpret_cast<PQWORD>(buffer + matchAddr + tPos);
+		nRet = *reinterpret_cast<PQWORD>(buffer.data() + matchAddr + tPos);
 	}
 	else
 	{
-		nRet = *reinterpret_cast<PDWORD>(buffer + matchAddr + tPos);
+		nRet = *reinterpret_cast<PDWORD>(buffer.data() + matchAddr + tPos);
 	}
-	delete[] buffer;
 
 	return nRet;
 }
@@ -262,10 +256,10 @@ bool EQGameScanner::loadPEInfo()
 		file.read((char*)sectionHeader, sizeof(sectionHeader));
 
 		PESection sec;
-		sec.virtualSize	= *reinterpret_cast<DWORD*>(sectionHeader + 8);
+		sec.virtualSize	   = *reinterpret_cast<DWORD*>(sectionHeader + 8);
 		sec.virtualAddress = *reinterpret_cast<DWORD*>(sectionHeader + 12);
-		sec.rawSize			= *reinterpret_cast<DWORD*>(sectionHeader + 16);
-		sec.rawPointer		= *reinterpret_cast<DWORD*>(sectionHeader + 20);
+		sec.rawSize		   = *reinterpret_cast<DWORD*>(sectionHeader + 16);
+		sec.rawPointer	   = *reinterpret_cast<DWORD*>(sectionHeader + 20);
 		peSections.push_back(sec);
 	}
 
@@ -311,26 +305,25 @@ QWORD EQGameScanner::findEQAbsolutePointer(QWORD startAddress, std::size_t block
 	if (!file)
 		return 0;
 
-	PBYTE buffer = new BYTE[blockSize];
-	memset(buffer, 0, blockSize);
+	std::vector<BYTE> buffer(blockSize, 0);
 
 	file.seekg(startAddress, std::ios::beg);
-	file.read((char*)buffer, blockSize);
+	file.read(reinterpret_cast<char*>(buffer.data()), blockSize);
 
 	QWORD result = 0;
 
 	for (QWORD i = 0; i + mask.size() <= blockSize; i++)
 	{
-		if (!compareData(buffer + i, byteMask, charMask))
+		if (!compareData(buffer.data() + i, byteMask, charMask))
 			continue;
 
-		INT32 disp = *reinterpret_cast<INT32*>(buffer + i + tPos);
+		INT32 disp = *reinterpret_cast<INT32*>(buffer.data() + i + tPos);
 
 		QWORD rvaAfterField;
 		if (!fileOffsetToRVA(startAddress + i + tPos + 4, rvaAfterField))
 			continue;
 
-		QWORD candidate	= imageBase + rvaAfterField + disp;
+		QWORD candidate	   = imageBase + rvaAfterField + disp;
 		QWORD candidateRva = candidate - imageBase;
 
 		// A genuine RIP-relative reference must resolve into a mapped
@@ -342,7 +335,6 @@ QWORD EQGameScanner::findEQAbsolutePointer(QWORD startAddress, std::size_t block
 		break;
 	}
 
-	delete[] buffer;
 	return result;
 }
 
@@ -389,9 +381,9 @@ bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, Netwo
 
 	for (const auto& entry : kPrimaryOffsets)
 	{
-		QWORD mystart	  = (QWORD)ir_intf->readIntegerEntry(entry.iniSection, "Start", true);
+		QWORD mystart	 = (QWORD)ir_intf->readIntegerEntry(entry.iniSection, "Start", true);
 		string mypattern = ir_intf->readEscapeStrings(entry.iniSection, "Pattern");
-		string mymask	  = ir_intf->readStringEntry(entry.iniSection, "Mask", true);
+		string mymask	 = ir_intf->readStringEntry(entry.iniSection, "Mask", true);
 
 		QWORD matchAddr = findEQAbsolutePointer(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
 
@@ -462,9 +454,9 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 	// falling back to whatever the ini currently has.
 	EQPrimaryOffsets::CharInfo = net_intf->current_offset((int)NetworkServer::OT_self);
 	{
-		QWORD mystart	  = (QWORD)ir_intf->readIntegerEntry("CharInfo", "Start", true);
+		QWORD mystart	 = (QWORD)ir_intf->readIntegerEntry("CharInfo", "Start", true);
 		string mypattern = ir_intf->readEscapeStrings("CharInfo", "Pattern");
-		string mymask	  = ir_intf->readStringEntry("CharInfo", "Mask", true);
+		string mymask	 = ir_intf->readStringEntry("CharInfo", "Mask", true);
 
 		QWORD matchAddr = findEQAbsolutePointer(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
 		if (matchAddr != NULL)
@@ -475,9 +467,9 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 	for (const auto& entry : kSpawnInfoOffsets)
 	{
-		QWORD mystart	  = (QWORD)ir_intf->readIntegerEntry(entry.iniSection, "Start", true);
+		QWORD mystart	 = (QWORD)ir_intf->readIntegerEntry(entry.iniSection, "Start", true);
 		string mypattern = ir_intf->readEscapeStrings(entry.iniSection, "Pattern");
-		string mymask	  = ir_intf->readStringEntry(entry.iniSection, "Mask", true);
+		string mymask	 = ir_intf->readStringEntry(entry.iniSection, "Mask", true);
 
 		QWORD matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
 

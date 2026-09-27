@@ -29,17 +29,23 @@ add_executable(MySEQ.server WIN32
     MySEQ.server.rc
 )
 target_compile_definitions(MySEQ.server PRIVATE WIN32 _WINDOWS)
-target_compile_options(MySEQ.server PRIVATE /EHsc /W4 /analyze)
+target_compile_options(MySEQ.server PRIVATE /EHsc /W4 /WX /analyze)
 target_link_libraries(MySEQ.server PRIVATE wsock32 iphlpapi ws2_32 psapi kernel32)
 target_include_directories(MySEQ.server PRIVATE include)
 target_precompile_headers(MySEQ.server PRIVATE include/stdafx.h)
+
+# Embed a manifest requesting themed (Common Controls v6) visual styles -
+# without it, buttons/edit boxes render with the classic Windows 95 look.
+if (MSVC)
+    target_link_options(MySEQ.server PRIVATE /MANIFEST:NO)
+endif()
 
 # MySEQ.server looks for its .ini files next to the executable / in the
 # working directory at runtime; copy them into the build output so a plain
 # "Run" in the IDE works without manual setup.
 add_custom_command(TARGET MySEQ.server POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_SOURCE_DIR}/resources/myseqserver.ini" "${CMAKE_SOURCE_DIR}/resources/config.ini"
+        "${CMAKE_SOURCE_DIR}/resources/myseqserver.ini" "${CMAKE_SOURCE_DIR}/resources/config.ini" "${CMAKE_SOURCE_DIR}/resources/offsets.ini"
         "$<TARGET_FILE_DIR:MySEQ.server>"
 )
 
@@ -55,6 +61,6 @@ add_executable(OffsetScanningTests
     src/stdafx.cpp
 )
 target_compile_definitions(OffsetScanningTests PRIVATE WIN32 _WINDOWS)
-target_compile_options(OffsetScanningTests PRIVATE /EHsc /W4 /analyze)
+target_compile_options(OffsetScanningTests PRIVATE /EHsc /W4 /WX /analyze)
 target_include_directories(OffsetScanningTests PRIVATE include)
 target_precompile_headers(OffsetScanningTests PRIVATE include/stdafx.h)

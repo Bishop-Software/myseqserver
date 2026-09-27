@@ -66,7 +66,7 @@ public:
 
 	string offsetNames[(UINT)World::offset_types::OT_max];
 
-	char* rawBuffer{};
+	vector<char> rawBuffer;
 
 	worldBuffer_t tempWorldBuffer{};
 
@@ -111,9 +111,8 @@ private:
 
 public:
 	World(void);
-	~World();
 
-	World(const World&) = delete;
+	World(const World&)			   = delete;
 	World& operator=(const World&) = delete;
 
 	void init(IniReaderInterface* ir_intf);

@@ -47,9 +47,16 @@ IniReader iniReader;
 
 char iniFile[_MAX_PATH + 1];
 char configIniFile[_MAX_PATH + 1];
+char offsetsIniFile[_MAX_PATH + 1];
 
 int server_status;
 int check_delay;
+
+// Tick count (GetTickCount64) of the last FD_READ that found a valid
+// eqgame.exe attach, i.e. the last time server_status actually had fresh
+// data behind it. Used by the status heartbeat timer to detect a client
+// that's connected but has gone quiet.
+ULONGLONG lastDataTick;
 
 void ReadArgs(int argc, char* argv[]);
 

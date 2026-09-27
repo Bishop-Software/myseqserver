@@ -1,0 +1,100 @@
+name: Release
+
+# Fires whenever a commit lands on main - which, per branch protection, only
+# happens via a merged, CI-passed PR from a release/* or hotfix/* branch.
+# Builds a Release exe, packages it the same way `make release` does by
+# hand, and publishes it as a GitHub Release tagged from the version
+# embedded in MySEQ.server.rc's VERSIONINFO block (FILEVERSION/
+# PRODUCTVERSION) - the same version string the project already bumps
+# deliberately as part of a release (see the "bump to 3.0.0" history).
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # MySEQ.server.rc is UTF-16 (Visual Studio resource editor), which
+      # breaks naive grep/sed - Get-Content -Encoding Unicode handles it
+      # correctly, same as everywhere else in this repo it's been parsed.
+      - name: Determine version from MySEQ.server.rc
+        id: version
+        shell: pwsh
+        run: |
+          $line = Get-Content -Encoding Unicode MySEQ.server.rc | Where-Object { $_ -match '^\s*FILEVERSION' } | Select-Object -First 1
+          if (-not $line -or $line -notmatch '(\d+),(\d+),(\d+),(\d+)') {
+            Write-Error "Could not parse a version out of MySEQ.server.rc's FILEVERSION line: $line"
+            exit 1
+          }
+          $version = "$($matches[1]).$($matches[2]).$($matches[3])"
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=v$version" >> $env:GITHUB_OUTPUT
+
+      # Forces a deliberate version bump before every release/hotfix merge to
+      # main, rather than silently skipping or overwriting a prior release.
+      - name: Ensure this version hasn't already been released
+        shell: bash
+        run: |
+          set -e
+          if git ls-remote --exit-code --tags origin "refs/tags/v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "::error::Tag v${{ steps.version.outputs.version }} already exists - bump FILEVERSION/PRODUCTVERSION in MySEQ.server.rc before merging to main."
+            exit 1
+          fi
+
+      - name: Set up MSVC developer environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Configure (CMake + Ninja)
+        run: cmake -G Ninja -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build cmake-build-release
+
+      - name: Run offline smoke tests
+        run: .\cmake-build-release\OffsetScanningTests.exe
+
+      - name: Upload Release build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-build
+          path: cmake-build-release\MySEQ.server.exe
+          retention-days: 1
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download Release build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-build
+
+      - name: Install packaging tools
+        run: sudo apt-get update && sudo apt-get install -y make zip
+
+      - name: Build the release zip
+        run: make release VER=${{ needs.build.outputs.version }}
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.build.outputs.tag }}
+          name: ${{ needs.build.outputs.tag }}
+          files: releases/myseq.server.${{ needs.build.outputs.version }}.zip
+          generate_release_notes: true

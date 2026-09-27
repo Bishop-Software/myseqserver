@@ -37,11 +37,6 @@ Spawn::Spawn(void)
 	largestOffset = 0;
 }
 
-Spawn::~Spawn()
-{
-	delete[] rawBuffer;
-}
-
 void Spawn::setOffset(offset_types ot, UINT value, const string& ptrName)
 
 {
@@ -112,8 +107,7 @@ void Spawn::init(IniReaderInterface* ir_intf)
 
 	// The raw buffer is what where we dump raw data from the EQ process into
 
-	delete[] rawBuffer;
-	rawBuffer = new char[largestOffset];
+	rawBuffer.assign(largestOffset, 0);
 
 	cout << "Spawn: Spawn Offsets read in." << endl;
 }

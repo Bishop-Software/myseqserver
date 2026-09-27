@@ -23,7 +23,12 @@
 #include <cstdlib>
 #include <string>
 
-#define TO_LOWER(str) (transform(str.begin(), str.end(), str.begin(), (int (*)(int))tolower))
+// tolower() is only well-defined for values representable as unsigned char
+// (or EOF); casting to unsigned char before the call (rather than just
+// casting tolower's signature to match transform's expected type) avoids
+// undefined behavior on platforms where char is signed and the string has
+// extended-ASCII bytes.
+#define TO_LOWER(str) (transform((str).begin(), (str).end(), (str).begin(), [](unsigned char c) { return static_cast<char>(tolower(c)); }))
 
 #define DISPLAY_SPAWN_ITEM(off, member) cout << "    " << spawnParser.ptrNames[spawnParser.off] << " -> " << spawnParser.tempNetBuffer.member << endl
 
@@ -101,7 +106,7 @@ void Debugger::printMenu()
 	//	cout << "   wt) walk the spawnlist (reverse) using pTarget" << endl;
 	cout << "   vs) walk the spawnlist (forward) using pSelf (vt) pTarget" << endl;
 	//	cout << "   vt) walk the spawnlist (forward) using pTarget" << endl;
-	cout << "    x) exit debugger" << endl;
+	cout << "       close this window to exit the debugger" << endl;
 	cout << endl;
 }
 
@@ -118,6 +123,9 @@ void Debugger::enterDebugLoop(MemReaderInterface* mr_intf, IniReaderInterface* i
 		cout << " > ";
 
 		getline(cin, userInput);
+
+		if (cin.fail())
+			break;
 
 		if (userInput.compare(0, 1, "?") == 0)
 			printMenu();
@@ -173,8 +181,6 @@ void Debugger::enterDebugLoop(MemReaderInterface* mr_intf, IniReaderInterface* i
 			walkSpawnList(mr_intf, OT_self, false);
 		else if (userInput.compare(0, 2, "vt") == 0)
 			walkSpawnList(mr_intf, OT_target, false);
-		else if (userInput.compare(0, 1, "x") == 0)
-			break;
 		else
 			cout << " Invalid selection. Please try again." << endl;
 
@@ -396,7 +402,7 @@ void Debugger::processSpawn(MemReaderInterface* mr_intf, offset_types ot)
 
 	if (pMem)
 	{
-		if (!(mr_intf->extractToBuffer(pMem, spawnParser.rawBuffer, spawnParser.largestOffset)))
+		if (!(mr_intf->extractToBuffer(pMem, spawnParser.rawBuffer.data(), spawnParser.largestOffset)))
 		{
 			cout << " Failed to read memory at address 0x" << hex << (pMem + kEQImageBase - mr_intf->getCurrentBaseAddress()) << endl;
 
@@ -463,7 +469,7 @@ void Debugger::walkSpawnList(MemReaderInterface* mr_intf, offset_types ot, bool 
 	// First try and get to the initial spawn entity
 	if (pMem)
 	{
-		if (!(mr_intf->extractToBuffer(pMem, spawnParser.rawBuffer, spawnParser.largestOffset)))
+		if (!(mr_intf->extractToBuffer(pMem, spawnParser.rawBuffer.data(), spawnParser.largestOffset)))
 		{
 			cout << " Failed to read memory at address 0x" << hex << (pMem + kEQImageBase - mr_intf->getCurrentBaseAddress()) << endl;
 
@@ -513,7 +519,7 @@ void Debugger::walkSpawnList(MemReaderInterface* mr_intf, offset_types ot, bool 
 			else
 				pMem = pNext;
 
-			if (!(mr_intf->extractToBuffer(pMem, spawnParser.rawBuffer, spawnParser.largestOffset)))
+			if (!(mr_intf->extractToBuffer(pMem, spawnParser.rawBuffer.data(), spawnParser.largestOffset)))
 			{
 				if (spawnCount == 0)
 					cout << " Failed to read memory at address 0x" << hex << pMem << endl;
@@ -937,7 +943,9 @@ void Debugger::scanForWorldFromDate(MemReaderInterface* mr_intf, offset_types ot
 	yearOffset = worldParser.offsets[worldParser.OT_year];
 
 	// First get our month/day/year values if given
-	mFind = dFind = yFind = 0;
+	mFind = 0;
+	dFind = 0;
+	yFind = 0;
 
 	if (tokenizeDate(args, tokens) != 3)
 	{

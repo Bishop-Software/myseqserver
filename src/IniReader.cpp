@@ -87,7 +87,18 @@ void IniReader::openConfigFile(const string& _filename)
 
 	cout << "IniReader: Reading Config INI file" << endl;
 
-	cout << "ConfigIniFile: " << filename << endl;
+	cout << "ConfigIniFile: " << configfilename << endl;
+}
+
+void IniReader::openOffsetsFile(const string& _filename)
+
+{
+
+	offsetsfilename = _filename;
+
+	cout << "IniReader: Reading Offsets INI file" << endl;
+
+	cout << "OffsetsIniFile: " << offsetsfilename << endl;
 }
 
 string IniReader::readStringEntry(const string& section, const string& entry, bool config)
@@ -96,7 +107,7 @@ string IniReader::readStringEntry(const string& section, const string& entry, bo
 
 	string rtn("");
 
-	if (GetPrivateProfileString(section.c_str(), entry.c_str(), TEXT(""), buffer, sizeof(buffer), config ? configfilename.c_str() : filename.c_str()) > 0)
+	if (GetPrivateProfileString(section.c_str(), entry.c_str(), TEXT(""), buffer, sizeof(buffer), config ? offsetsfilename.c_str() : filename.c_str()) > 0)
 
 	{
 
@@ -116,7 +127,7 @@ string IniReader::readEscapeStrings(const string& section, const string& entry)
 
 	string rtn("");
 	TCHAR newbuff[1024];
-	if (GetPrivateProfileString(section.c_str(), entry.c_str(), TEXT(""), newbuff, sizeof(newbuff), configfilename.c_str()) > 0)
+	if (GetPrivateProfileString(section.c_str(), entry.c_str(), TEXT(""), newbuff, sizeof(newbuff), offsetsfilename.c_str()) > 0)
 
 	{
 		bool inescape = false;
@@ -185,20 +196,20 @@ QWORD IniReader::readIntegerEntry(const string& section, const string& entry, bo
 {
 
 	QWORD rtn = 0;
-	_TCHAR buffer[255];
-	if (GetPrivateProfileString(section.c_str(), entry.c_str(), TEXT(""), buffer, sizeof(buffer), config ? configfilename.c_str() : filename.c_str()) > 0)
+	_TCHAR intBuffer[255];
+	if (GetPrivateProfileString(section.c_str(), entry.c_str(), TEXT(""), intBuffer, sizeof(intBuffer), config ? offsetsfilename.c_str() : filename.c_str()) > 0)
 
 	{
 
 		// See if number is hex (prefixed with 0x) or decimal (no prefix)
 
-		if (buffer[0] == '0')
+		if (intBuffer[0] == '0')
 
-			rtn = strtoull(buffer, NULL, 16);
+			rtn = strtoull(intBuffer, NULL, 16);
 
 		else
 
-			rtn = (QWORD)atoi(buffer);
+			rtn = (QWORD)atoi(intBuffer);
 	}
 
 	return rtn;
@@ -208,7 +219,7 @@ bool IniReader::writeStringEntry(const string& section, const string& entry, con
 
 {
 
-	if (WritePrivateProfileString(section.c_str(), entry.c_str(), value.c_str(), config ? configfilename.c_str() : filename.c_str()) > 0)
+	if (WritePrivateProfileString(section.c_str(), entry.c_str(), value.c_str(), config ? offsetsfilename.c_str() : filename.c_str()) > 0)
 		return true;
 	else
 		return false;
