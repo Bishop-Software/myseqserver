@@ -34,3 +34,30 @@ jobs:
 
       - name: Run offline smoke tests
         run: .\${{ env.BUILD_DIR }}\OffsetScanningTests.exe
+
+  format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+
+      - name: Check formatting
+        run: |
+          set -e
+          mapfile -t ignored < <(grep -v '^\s*#' .clang-format-ignore | grep -v '^\s*$')
+          mapfile -t files < <(git ls-files '*.cpp' '*.h')
+          failed=0
+          for f in "${files[@]}"; do
+            skip=0
+            for ig in "${ignored[@]}"; do
+              [ "$f" = "$ig" ] && skip=1 && break
+            done
+            [ "$skip" = 1 ] && continue
+            if ! clang-format --style=file --dry-run --Werror "$f"; then
+              failed=1
+            fi
+          done
+          exit $failed
