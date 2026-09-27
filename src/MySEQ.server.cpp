@@ -53,6 +53,13 @@ using namespace std;
 #define ID_TRAY_APP_ICON 6000
 #define WM_TRAYICON (WM_USER + 1)
 
+// Status heartbeat: periodically checks whether a "Connected" client has
+// gone quiet (no FD_READ in a while) despite the socket still being open,
+// so the status text/color don't stay on stale green data indefinitely.
+#define IDT_STATUS_HEARTBEAT 1
+#define STATUS_HEARTBEAT_INTERVAL_MS 5000
+#define STATUS_STALE_THRESHOLD_MS 15000
+
 UINT WM_TASKBARCREATED = 0;
 
 // #define _DEBUG_SERVICE
@@ -774,10 +781,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					{
 						// we have a good eqgame.exe process
 						check_delay	  = 0;
+						lastDataTick  = GetTickCount64();
+						if (server_status != 2 && h_MySEQServer)
+							SetDlgItemText(h_MySEQServer, IDC_TEXT_STATUS, "Connected");
 						server_status = 2;
 					}
 					else
 					{
+						if (server_status != 1 && h_MySEQServer)
+							SetDlgItemText(h_MySEQServer, IDC_TEXT_STATUS, "Connected (no EQ)");
 						server_status = 1;
 						check_delay	  = (check_delay + 1) % 10;
 						if (check_delay == 2)
@@ -803,13 +815,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						memReader.openFirstProcess("eqgame", false);
 					netServer.closeClientSocket();
 					netServer.openClientSocket();
+					lastDataTick = GetTickCount64();
 					if (memReader.getCurrentPID() == 0)
 						server_status = 1;
 					else
 						server_status = 2;
 					if (h_MySEQServer)
 					{
-						SetDlgItemText(h_MySEQServer, IDC_TEXT_STATUS, "Connected");
+						SetDlgItemText(h_MySEQServer, IDC_TEXT_STATUS, server_status == 2 ? "Connected" : "Connected (no EQ)");
 						check_delay = 0;
 					}
 				}
@@ -916,8 +929,22 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 					}
 				}
 			}
+
+			SetTimer(hDlg, IDT_STATUS_HEARTBEAT, STATUS_HEARTBEAT_INTERVAL_MS, NULL);
+
 			return (INT_PTR)TRUE;
+		case WM_TIMER:
+			if (wParam == IDT_STATUS_HEARTBEAT)
+			{
+				if (server_status == 2 && (GetTickCount64() - lastDataTick) > STATUS_STALE_THRESHOLD_MS)
+				{
+					server_status = 3;
+					SetDlgItemText(hDlg, IDC_TEXT_STATUS, "Connected (stale)");
+				}
+			}
+			break;
 		case WM_DESTROY:
+			KillTimer(hDlg, IDT_STATUS_HEARTBEAT);
 			if (g_hHeaderFont)
 			{
 				DeleteObject(g_hHeaderFont);
@@ -948,6 +975,8 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 					else if (server_status == 1) // Listening - Blue
 												 // or Connected and no eqgame.exe found
 						SetTextColor(hdcStatic, RGB(0, 0, 255));
+					else if (server_status == 3) // Connected but gone quiet - Orange
+						SetTextColor(hdcStatic, RGB(255, 140, 0));
 					else // connected with EQGame - Green
 						SetTextColor(hdcStatic, RGB(0, 255, 0));
 					break;
