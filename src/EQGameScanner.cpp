@@ -54,8 +54,8 @@ const PrimaryOffsetEntry kPrimaryOffsets[] = {
 };
 
 // The SpawnInfo struct-member offsets: plain immediate displacements
-// resolved via findEQPointerOffset, reported but not written back to the
-// ini automatically (ScanSecondary has always been a read-only report).
+// resolved via findEQPointerOffset and compared against/written back to
+// the matching [SpawnInfo Offsets] ini entry.
 struct SpawnInfoOffsetEntry
 {
 	const char* iniSection;
@@ -145,7 +145,7 @@ QWORD EQGameScanner::findEQPointerOffset(QWORD startAddress, std::size_t blockSi
 
 	// Search for a position that fits our masks in memory.
 	// Thanks to dom1n1k for the piece of code this is based off of.
-	for (QWORD i = 0; i < blockSize; ++i)
+	for (QWORD i = 0; i + mask.size() <= blockSize; ++i)
 	{
 		if (compareData(buffer.data() + i, byteMask, charMask))
 		{
@@ -280,6 +280,29 @@ bool EQGameScanner::fileOffsetToRVA(QWORD fileOffset, QWORD& rva) const
 	return false;
 }
 
+std::size_t EQGameScanner::scanBlockSize(QWORD startAddress)
+{
+	// Search to the end of the PE section containing startAddress (for
+	// Start=0x400, the whole .text section), so the scan grows with the
+	// client instead of silently missing code past a fixed window.
+	if (loadPEInfo())
+	{
+		for (const auto& sec : peSections)
+		{
+			if (startAddress >= sec.rawPointer && startAddress < sec.rawPointer + sec.rawSize)
+				return (std::size_t)(sec.rawPointer + sec.rawSize - startAddress);
+		}
+	}
+
+	// Not a PE32+ image, or Start lies outside every section: scan to EOF.
+	std::ifstream file(executablePath.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
+	if (!file)
+		return 0;
+
+	QWORD fileSize = (QWORD)file.tellg();
+	return startAddress < fileSize ? (std::size_t)(fileSize - startAddress) : 0;
+}
+
 bool EQGameScanner::rvaInMappedSection(QWORD rva) const
 {
 	for (const auto& sec : peSections)
@@ -385,7 +408,7 @@ bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, Netwo
 		string mypattern = ir_intf->readEscapeStrings(entry.iniSection, "Pattern");
 		string mymask	 = ir_intf->readStringEntry(entry.iniSection, "Mask", true);
 
-		QWORD matchAddr = findEQAbsolutePointer(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
+		QWORD matchAddr = findEQAbsolutePointer(mystart, scanBlockSize(mystart), (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
 
 		outputStream << entry.iniSection << "=0x" << std::hex << matchAddr;
 
@@ -404,7 +427,6 @@ bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, Netwo
 		if (!write_out)
 		{
 			outputStream << " # Does not match ini file.\r\n";
-			EnableWindow(GetDlgItem(hDlg, IDC_BUTTON2), TRUE);
 			continue;
 		}
 
@@ -426,13 +448,14 @@ bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, Netwo
 	return reload;
 }
 
-void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, NetworkServerInterface* net_intf)
+bool EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, NetworkServerInterface* net_intf, bool write_out)
 {
 	if (!executableExists())
 	{
 		SetDlgItemText(hDlg, IDC_EDIT2, "Error: Could not locate the specified executable file.");
-		return;
+		return false;
 	}
+	bool reload = false;
 
 	std::ostringstream findResults;
 	std::ostringstream outputStream;
@@ -458,7 +481,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 		string mypattern = ir_intf->readEscapeStrings("CharInfo", "Pattern");
 		string mymask	 = ir_intf->readStringEntry("CharInfo", "Mask", true);
 
-		QWORD matchAddr = findEQAbsolutePointer(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
+		QWORD matchAddr = findEQAbsolutePointer(mystart, scanBlockSize(mystart), (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
 		if (matchAddr != NULL)
 			EQPrimaryOffsets::CharInfo = matchAddr;
 	}
@@ -471,7 +494,7 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 		string mypattern = ir_intf->readEscapeStrings(entry.iniSection, "Pattern");
 		string mymask	 = ir_intf->readStringEntry(entry.iniSection, "Mask", true);
 
-		QWORD matchAddr = findEQPointerOffset(mystart, 0x900000, (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
+		QWORD matchAddr = findEQPointerOffset(mystart, scanBlockSize(mystart), (PBYTE)mypattern.c_str(), (PCHAR)mymask.c_str());
 
 		outputStream << entry.iniSection << "=0x" << std::hex << matchAddr;
 
@@ -486,10 +509,25 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 		if (matchAddr == currentValue)
 		{
 			outputStream << " # Match\r\n";
+			continue;
+		}
+
+		if (!write_out)
+		{
+			outputStream << " # Does not match ini file.\r\n";
+			continue;
+		}
+
+		std::stringstream strm;
+		strm << "0x" << std::hex << matchAddr;
+		if (ir_intf->writeStringEntry("SpawnInfo Offsets", entry.displayName, strm.str().c_str()))
+		{
+			reload = true;
+			outputStream << " # Written to ini file\r\n";
 		}
 		else
 		{
-			outputStream << " # Does not match ini file.\r\n";
+			outputStream << " # Found - Write failed\r\n";
 		}
 	}
 
@@ -497,4 +535,6 @@ void EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 	std::string v = findResults.str() + outputStream.str();
 	SetDlgItemText(hDlg, IDC_EDIT2, v.c_str());
+
+	return reload;
 }
