@@ -459,7 +459,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	else if (!services)
 	{
 		cout << "========================" << endl
-			 << "  MySEQServer v3.0.0.0  " << endl
+			 << "  MySEQServer v3.0.1.0  " << endl
 			 << "========================" << endl
 			 << endl
 			 << "This software is covered under the GNU Public License (GPL)" << endl
@@ -1262,13 +1262,9 @@ static bool TryEqGamePath(const TCHAR* baseDir, const TCHAR* subPath, TCHAR* out
 	return true;
 }
 
-// Shows a wait cursor and disables the Offset Finder's scan/write buttons for
-// as long as a scan is running, so a click registers visibly even though the
-// scan itself runs synchronously on the dialog's thread. IDC_BUTTON2 ("Write
-// Offsets to ini file") is disabled here too but deliberately never
-// re-enabled on destruction - its enabled state is scan-result-dependent
-// (EQGameScanner::ScanExecutable only turns it on when a scanned offset
-// actually differs from the ini file), not something to force back on.
+// Shows a wait cursor and disables the Offset Finder's scan buttons for as
+// long as a scan is running, so a click registers visibly even though the
+// scan itself runs synchronously on the dialog's thread.
 class ScopedScanCursor
 {
 public:
@@ -1277,7 +1273,6 @@ public:
 	{
 		previousCursor = SetCursor(LoadCursor(NULL, IDC_WAIT));
 		EnableWindow(GetDlgItem(hDlg, IDOK), FALSE);
-		EnableWindow(GetDlgItem(hDlg, IDC_BUTTON2), FALSE);
 		EnableWindow(GetDlgItem(hDlg, IDC_BUTTON3), FALSE);
 	}
 
@@ -1296,18 +1291,35 @@ private:
 	HCURSOR previousCursor;
 };
 
-// "Write Offsets to ini file" only enables itself once a primary-offset scan
-// finds a value that differs from the ini (see EQGameScanner::ScanExecutable)
-// - nothing in the dialog explained that relationship, so the button just
-// looked permanently greyed out. Spells it out in the status line instead.
-static void UpdateOffsetScanStatus(HWND hDlg)
+// Both Offset Finder scans write any changed offsets straight to the ini
+// (EQGameScanner::ScanExecutable/ScanSecondary with write_out); when one
+// did, reload so the running server picks the new values up, then report
+// the outcome in the status line.
+static void FinishOffsetScan(HWND hDlg, bool written)
 {
 	if (!scanner.executableExists())
+	{
 		SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Scan failed - see the log above for details.");
-	else if (IsWindowEnabled(GetDlgItem(hDlg, IDC_BUTTON2)))
-		SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Offsets differ from the ini file - click \"Write Offsets to ini file\" to update.");
-	else
-		SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Offsets already match the ini file. Nothing to write.");
+		return;
+	}
+
+	if (!written)
+	{
+		SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "No offsets changed - nothing written. See the log above for details.");
+		return;
+	}
+
+	// reload offsets
+	iniReader.openFile(iniFile);
+	netServer.init(&iniReader);
+
+	// close and reopen listener socket, in case port changed
+	netServer.closeListenerSocket();
+	running = netServer.openListenerSocket(false);
+
+	// update patch date in GUI
+	SetDlgItemText(h_MySEQServer, IDC_TEXT_PATCH, iniReader.patchDate.c_str());
+	SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Changed offsets written to the ini file and reloaded.");
 }
 
 INT_PTR CALLBACK OffsetDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM)
@@ -1343,47 +1355,15 @@ INT_PTR CALLBACK OffsetDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM)
 					// click was registered rather than the dialog looking frozen.
 					ScopedScanCursor scanCursor(hDlg);
 					scanner.setExe(eqFileName);
-					scanner.ScanExecutable(hDlg, &iniReader, &netServer);
-					UpdateOffsetScanStatus(hDlg);
+					FinishOffsetScan(hDlg, scanner.ScanExecutable(hDlg, &iniReader, &netServer, true));
 					// EndDialog(hDlg, IDOK);
-					break;
-				}
-				case IDC_BUTTON2:
-				{
-					ScopedScanCursor scanCursor(hDlg);
-					scanner.setExe(eqFileName);
-					if (scanner.ScanExecutable(hDlg, &iniReader, &netServer, true))
-					{
-						// reload offsets
-						iniReader.openFile(iniFile);
-						netServer.init(&iniReader);
-
-						// close and reopen listener socket, in case port changed
-						netServer.closeListenerSocket();
-						running = netServer.openListenerSocket(false);
-
-						// update patch date in GUI
-						LPCSTR patchdate;
-						patchdate = iniReader.patchDate.c_str();
-						SetDlgItemText(h_MySEQServer, IDC_TEXT_PATCH, patchdate);
-						SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Offsets written to the ini file and reloaded.");
-						// EndDialog(hDlg, IDC_BUTTON2);
-					}
-					else
-					{
-						SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Nothing was written - see the log above for details.");
-					}
 					break;
 				}
 				case IDC_BUTTON3:
 				{
 					ScopedScanCursor scanCursor(hDlg);
 					scanner.setExe(eqFileName);
-					scanner.ScanSecondary(hDlg, &iniReader, &netServer);
-					if (!scanner.executableExists())
-						SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Scan failed - see the log above for details.");
-					else
-						SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Secondary offsets scanned (read-only) - see the log above for details.");
+					FinishOffsetScan(hDlg, scanner.ScanSecondary(hDlg, &iniReader, &netServer, true));
 					// EndDialog(hDlg, IDOK);
 					break;
 				}

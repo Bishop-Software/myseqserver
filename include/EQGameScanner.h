@@ -49,8 +49,11 @@ public:
 	// section of the executable.
 	QWORD findEQAbsolutePointer(QWORD startAddress, std::size_t blockSize, const PBYTE byteMask, const PCHAR charMask);
 
+	// Both scans report each offset in the dialog's log; with write_out they
+	// also write every found offset that differs from the ini back to it.
+	// Returns true if anything was written (the caller should reload).
 	bool ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, NetworkServerInterface* net_intf, bool write_out = false);
-	void ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, NetworkServerInterface* net_intf);
+	bool ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, NetworkServerInterface* net_intf, bool write_out = false);
 
 private:
 	bool compareData(PBYTE data, PBYTE byteMask, PCHAR charMask);
@@ -70,6 +73,10 @@ private:
 	bool loadPEInfo();
 	bool fileOffsetToRVA(QWORD fileOffset, QWORD& rva) const;
 	bool rvaInMappedSection(QWORD rva) const;
+
+	// Bytes to scan from startAddress (a file offset): to the end of the
+	// PE section containing it, or to EOF if there's no such section.
+	std::size_t scanBlockSize(QWORD startAddress);
 
 private:
 	std::string executablePath;
