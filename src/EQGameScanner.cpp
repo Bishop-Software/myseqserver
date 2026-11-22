@@ -490,6 +490,18 @@ bool EQGameScanner::compareData(PBYTE data, PBYTE byteMask, PCHAR charMask)
 	return (*charMask) == NULL;
 }
 
+// A matching offset may still be stored in a different spelling (e.g. a
+// hand-entered "0x140ECAE64"); rewrite it in the scanner's canonical
+// lowercase form so the ini stays consistent. The value is unchanged, so
+// no reload is needed.
+void EQGameScanner::normalizeHexEntry(IniReaderInterface* ir_intf, const char* section, const char* key, QWORD value)
+{
+	std::stringstream strm;
+	strm << "0x" << std::hex << value;
+	if (ir_intf->readStringEntry(section, key) != strm.str())
+		ir_intf->writeStringEntry(section, key, strm.str());
+}
+
 bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, NetworkServerInterface* net_intf, bool write_out)
 {
 	if (!executableExists())
@@ -548,6 +560,8 @@ bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, Netwo
 
 		if (matchAddr == net_intf->current_offset((int)entry.offsetType))
 		{
+			if (write_out)
+				normalizeHexEntry(ir_intf, "Memory Offsets", entry.iniSection, matchAddr);
 			outputStream << " # Match\r\n";
 			continue;
 		}
@@ -636,6 +650,8 @@ bool EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 		if (matchAddr == currentValue)
 		{
+			if (write_out)
+				normalizeHexEntry(ir_intf, "SpawnInfo Offsets", entry.displayName, matchAddr);
 			outputStream << " # Match\r\n";
 			continue;
 		}

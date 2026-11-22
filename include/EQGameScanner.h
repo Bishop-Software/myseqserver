@@ -67,6 +67,7 @@ public:
 
 private:
 	bool readExecutable(std::vector<BYTE>& data) const;
+	static void normalizeHexEntry(IniReaderInterface* ir_intf, const char* section, const char* key, QWORD value);
 	bool compareData(PBYTE data, PBYTE byteMask, PCHAR charMask);
 
 	struct PESection
