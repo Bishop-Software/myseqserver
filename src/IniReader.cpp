@@ -48,7 +48,9 @@ void IniReader::openFile(const string& _filename)
 
 	filename = _filename;
 
-	patchDate = readStringEntry("File Info", "PatchDate");
+	patchDate	= readStringEntry("File Info", "PatchDate");
+	clientHash	= readStringEntry("File Info", "ClientHash");
+	buildString = readStringEntry("File Info", "BuildString");
 
 	if (patchDate == "")
 
@@ -68,7 +70,23 @@ void IniReader::openFile(const string& _filename)
 		cout << "IniFile: " << filename << endl;
 
 		cout << "Patch Date: " << patchDate << endl;
+
+		if (!clientHash.empty())
+			cout << "Client Hash: " << clientHash << endl;
+
+		if (!buildString.empty())
+			cout << "Build String: " << buildString << endl;
 	}
+}
+
+string IniReader::GetPatchDisplay() const
+{
+	static const string kBanner = "Release Client #";
+	if (buildString.compare(0, kBanner.size(), kBanner) != 0)
+		return patchDate;
+
+	string::size_type end = buildString.find(' ', kBanner.size());
+	return patchDate + " (Client #" + buildString.substr(kBanner.size(), end - kBanner.size()) + ")";
 }
 
 void IniReader::openConfigFile(const string& _filename)
