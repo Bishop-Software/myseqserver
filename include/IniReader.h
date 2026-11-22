@@ -80,6 +80,15 @@ public:
 
 	string patchDate;
 
+	// Optional [File Info] entries written by the Offset Finder; "" if absent.
+	string clientHash;
+
+	string buildString;
+
+	// PatchDate plus the client build number (e.g. "11/19/2026 (Client #630)")
+	// when BuildString is present, for the main dialog's Patch label.
+	string GetPatchDisplay() const;
+
 	bool GetStartMinimized()
 	{
 		return StartMinimized;
