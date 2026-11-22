@@ -323,7 +323,7 @@ void TestFindBuildString_ParsesBannerAndBuildStamp(EQGameScanner& scanner)
 	// padding, __DATE__ (space-padded day), then an unrelated string.
 	static const char kData[] = "junk\0Fatal error occurred in mainthread! (Release Client #630)\n\0\0\0\0\0\0"
 								"12:09:09\0\0\0\0\0\0\0\0Nov  2 2026\0\0\0\0\0Client Version: %s %s\0";
-	auto path = MakeTempFilePath(".exe");
+	auto path				  = MakeTempFilePath(".exe");
 	WriteBinaryFile(path, BytesOf(kData, sizeof(kData)));
 
 	scanner.setExe((TCHAR*)path.c_str());
@@ -335,7 +335,7 @@ void TestFindBuildString_ParsesBannerAndBuildStamp(EQGameScanner& scanner)
 void TestFindBuildString_NoStampReturnsBannerOnly(EQGameScanner& scanner)
 {
 	static const char kData[] = "(Release Client #12)\0\0unrelated\0";
-	auto path = MakeTempFilePath(".exe");
+	auto path				  = MakeTempFilePath(".exe");
 	WriteBinaryFile(path, BytesOf(kData, sizeof(kData)));
 
 	scanner.setExe((TCHAR*)path.c_str());
@@ -347,7 +347,7 @@ void TestFindBuildString_NoStampReturnsBannerOnly(EQGameScanner& scanner)
 void TestFindBuildString_NoBannerReturnsEmpty(EQGameScanner& scanner)
 {
 	static const char kData[] = "Release Client #\0 12:09:09\0Nov 12 2026\0";
-	auto path = MakeTempFilePath(".exe");
+	auto path				  = MakeTempFilePath(".exe");
 	WriteBinaryFile(path, BytesOf(kData, sizeof(kData)));
 
 	scanner.setExe((TCHAR*)path.c_str());

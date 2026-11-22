@@ -485,7 +485,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	{
 		netServer.init(&iniReader);
 
-		running = netServer.openListenerSocket(false);
+		running		  = netServer.openListenerSocket(false);
 		server_status = 1;
 		if (h_MySEQServer)
 		{
