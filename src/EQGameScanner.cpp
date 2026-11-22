@@ -16,7 +16,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "stdafx.h"
+#include <algorithm>
 #include <fstream>
+#include <bcrypt.h>
 #include "EQGameScanner.h"
 #include "minwindef.h"
 
@@ -98,6 +100,122 @@ void EQGameScanner::setExe(const TCHAR* str)
 	peInfoLoaded = false;
 	peSections.clear();
 }
+bool EQGameScanner::readExecutable(std::vector<BYTE>& data) const
+{
+	std::ifstream file(executablePath.c_str(), std::ios::in | std::ios::binary);
+	if (!file)
+		return false;
+
+	data.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+	return !data.empty();
+}
+
+std::string EQGameScanner::computeClientHash() const
+{
+	std::vector<BYTE> data;
+	if (!readExecutable(data) || data.size() > ULONG_MAX)
+		return "";
+
+	BCRYPT_ALG_HANDLE hAlg = nullptr;
+	if (!BCRYPT_SUCCESS(BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_SHA1_ALGORITHM, nullptr, 0)))
+		return "";
+
+	BYTE digest[20] = {};
+	NTSTATUS status = BCryptHash(hAlg, nullptr, 0, data.data(), (ULONG)data.size(), digest, sizeof(digest));
+	BCryptCloseAlgorithmProvider(hAlg, 0);
+	if (!BCRYPT_SUCCESS(status))
+		return "";
+
+	static const char kHex[] = "0123456789abcdef";
+	std::string hex;
+	hex.reserve(sizeof(digest) * 2);
+	for (BYTE b : digest)
+	{
+		hex += kHex[b >> 4];
+		hex += kHex[b & 0x0F];
+	}
+	return hex;
+}
+
+namespace
+{
+bool isDigitChar(char c)
+{
+	return c >= '0' && c <= '9';
+}
+
+bool isAlphaChar(char c)
+{
+	return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+
+// __TIME__ format: "HH:MM:SS"
+bool looksLikeBuildTime(const std::string& s)
+{
+	return s.size() == 8 && isDigitChar(s[0]) && isDigitChar(s[1]) && s[2] == ':' && isDigitChar(s[3]) && isDigitChar(s[4]) && s[5] == ':' &&
+		   isDigitChar(s[6]) && isDigitChar(s[7]);
+}
+
+// __DATE__ format: "Mmm dd yyyy" (day space-padded when < 10)
+bool looksLikeBuildDate(const std::string& s)
+{
+	return s.size() == 11 && isAlphaChar(s[0]) && isAlphaChar(s[1]) && isAlphaChar(s[2]) && s[3] == ' ' && (s[4] == ' ' || isDigitChar(s[4])) &&
+		   isDigitChar(s[5]) && s[6] == ' ' && isDigitChar(s[7]) && isDigitChar(s[8]) && isDigitChar(s[9]) && isDigitChar(s[10]);
+}
+} // namespace
+
+std::string EQGameScanner::findBuildString() const
+{
+	std::vector<BYTE> data;
+	if (!readExecutable(data))
+		return "";
+
+	static const char kBanner[] = "Release Client #";
+	const std::size_t bannerLen = sizeof(kBanner) - 1;
+
+	auto it = std::search(data.begin(), data.end(), kBanner, kBanner + bannerLen);
+	if (it == data.end())
+		return "";
+
+	std::size_t pos = (std::size_t)(it - data.begin()) + bannerLen;
+	std::string number;
+	while (pos < data.size() && isDigitChar((char)data[pos]))
+		number += (char)data[pos++];
+	if (number.empty())
+		return "";
+
+	std::string result = kBanner + number;
+
+	// Skip the rest of the banner string, then look at the next few
+	// null-terminated strings for the __TIME__ / __DATE__ literals.
+	while (pos < data.size() && data[pos] != 0)
+		++pos;
+
+	const std::size_t limit = (std::min)(data.size(), pos + 128);
+	std::string timeStr, dateStr;
+	while (pos < limit && (timeStr.empty() || dateStr.empty()))
+	{
+		if (data[pos] == 0)
+		{
+			++pos;
+			continue;
+		}
+		std::size_t start = pos;
+		while (pos < limit && data[pos] != 0)
+			++pos;
+		std::string s(data.begin() + start, data.begin() + pos);
+		if (timeStr.empty() && looksLikeBuildTime(s))
+			timeStr = s;
+		else if (dateStr.empty() && looksLikeBuildDate(s))
+			dateStr = s;
+	}
+
+	if (!timeStr.empty() && !dateStr.empty())
+		result += " " + timeStr + " " + dateStr;
+
+	return result;
+}
+
 bool EQGameScanner::executableExists() const
 {
 	std::ifstream file(executablePath.c_str(), std::ios::in);
@@ -372,6 +490,18 @@ bool EQGameScanner::compareData(PBYTE data, PBYTE byteMask, PCHAR charMask)
 	return (*charMask) == NULL;
 }
 
+// A matching offset may still be stored in a different spelling (e.g. a
+// hand-entered "0x140ECAE64"); rewrite it in the scanner's canonical
+// lowercase form so the ini stays consistent. The value is unchanged, so
+// no reload is needed.
+void EQGameScanner::normalizeHexEntry(IniReaderInterface* ir_intf, const char* section, const char* key, QWORD value)
+{
+	std::stringstream strm;
+	strm << "0x" << std::hex << value;
+	if (ir_intf->readStringEntry(section, key) != strm.str())
+		ir_intf->writeStringEntry(section, key, strm.str());
+}
+
 bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, NetworkServerInterface* net_intf, bool write_out)
 {
 	if (!executableExists())
@@ -391,10 +521,20 @@ bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, Netwo
 		SYSTEMTIME st;
 		FileTimeToSystemTime(&ftLastMod, &st);
 		GetDateFormat(LOCALE_USER_DEFAULT, DATE_SHORTDATE, &st, NULL, szFileDate, 255);
+		string clientHash  = computeClientHash();
+		string buildString = findBuildString();
 		if (write_out)
+		{
 			ir_intf->writeStringEntry("File Info", "PatchDate", szFileDate);
+			if (!clientHash.empty())
+				ir_intf->writeStringEntry("File Info", "ClientHash", clientHash);
+			if (!buildString.empty())
+				ir_intf->writeStringEntry("File Info", "BuildString", buildString);
+		}
 		outputStream << "[File Info]\r\n";
-		outputStream << "PatchDate=" << szFileDate << "\r\n\r\n";
+		outputStream << "PatchDate=" << szFileDate << "\r\n";
+		outputStream << "ClientHash=" << clientHash << "\r\n";
+		outputStream << "BuildString=" << buildString << "\r\n\r\n";
 		outputStream << "[Port]\r\n";
 		UINT ini_port = (UINT)ir_intf->readIntegerEntry("Port", "Port");
 		outputStream << "Port=" << ini_port << "\r\n\r\n";
@@ -420,6 +560,8 @@ bool EQGameScanner::ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, Netwo
 
 		if (matchAddr == net_intf->current_offset((int)entry.offsetType))
 		{
+			if (write_out)
+				normalizeHexEntry(ir_intf, "Memory Offsets", entry.iniSection, matchAddr);
 			outputStream << " # Match\r\n";
 			continue;
 		}
@@ -508,6 +650,8 @@ bool EQGameScanner::ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, Networ
 
 		if (matchAddr == currentValue)
 		{
+			if (write_out)
+				normalizeHexEntry(ir_intf, "SpawnInfo Offsets", entry.displayName, matchAddr);
 			outputStream << " # Match\r\n";
 			continue;
 		}

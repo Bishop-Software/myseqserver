@@ -459,7 +459,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	else if (!services)
 	{
 		cout << "========================" << endl
-			 << "  MySEQServer v3.0.1.0  " << endl
+			 << "  MySEQServer v3.0.2.0  " << endl
 			 << "========================" << endl
 			 << endl
 			 << "This software is covered under the GNU Public License (GPL)" << endl
@@ -485,13 +485,11 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	{
 		netServer.init(&iniReader);
 
-		running = netServer.openListenerSocket(false);
-		LPCSTR patchdate;
-		patchdate	  = iniReader.patchDate.c_str();
+		running		  = netServer.openListenerSocket(false);
 		server_status = 1;
 		if (h_MySEQServer)
 		{
-			SetDlgItemText(h_MySEQServer, IDC_TEXT_PATCH, patchdate);
+			SetDlgItemText(h_MySEQServer, IDC_TEXT_PATCH, iniReader.GetPatchDisplay().c_str());
 			SetDlgItemText(h_MySEQServer, IDC_TEXT_STATUS, "Listening");
 			SetDlgItemText(h_MySEQServer, IDC_TEXT_ZONE, "");
 			SetDlgItemText(h_MySEQServer, IDC_TEXT_NAME, "");
@@ -1087,9 +1085,7 @@ INT_PTR CALLBACK ServerDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 					running = netServer.openListenerSocket(false);
 
 					// update patch date in GUI
-					LPCSTR patchdate;
-					patchdate = iniReader.patchDate.c_str();
-					SetDlgItemText(h_MySEQServer, IDC_TEXT_PATCH, patchdate);
+					SetDlgItemText(h_MySEQServer, IDC_TEXT_PATCH, iniReader.GetPatchDisplay().c_str());
 
 					if (running)
 						netServer.logEvent("Reload: offsets and config reloaded successfully");
@@ -1318,7 +1314,7 @@ static void FinishOffsetScan(HWND hDlg, bool written)
 	running = netServer.openListenerSocket(false);
 
 	// update patch date in GUI
-	SetDlgItemText(h_MySEQServer, IDC_TEXT_PATCH, iniReader.patchDate.c_str());
+	SetDlgItemText(h_MySEQServer, IDC_TEXT_PATCH, iniReader.GetPatchDisplay().c_str());
 	SetDlgItemText(hDlg, IDC_TEXT_OFFSETSTATUS, "Changed offsets written to the ini file and reloaded.");
 }
 

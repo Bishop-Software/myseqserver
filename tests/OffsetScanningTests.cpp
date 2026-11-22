@@ -312,6 +312,67 @@ void TestReadEscapeStrings_MalformedEscapeIsSkippedNotFatal(IniReader& ini)
 	DeleteFileA(path.c_str());
 }
 
+std::vector<BYTE> BytesOf(const char* data, std::size_t len)
+{
+	return std::vector<BYTE>(data, data + len);
+}
+
+void TestFindBuildString_ParsesBannerAndBuildStamp(EQGameScanner& scanner)
+{
+	// Same layout as the real client: crash banner, padding, __TIME__,
+	// padding, __DATE__ (space-padded day), then an unrelated string.
+	static const char kData[] = "junk\0Fatal error occurred in mainthread! (Release Client #630)\n\0\0\0\0\0\0"
+								"12:09:09\0\0\0\0\0\0\0\0Nov  2 2026\0\0\0\0\0Client Version: %s %s\0";
+	auto path				  = MakeTempFilePath(".exe");
+	WriteBinaryFile(path, BytesOf(kData, sizeof(kData)));
+
+	scanner.setExe((TCHAR*)path.c_str());
+	CHECK(scanner.findBuildString() == "Release Client #630 12:09:09 Nov  2 2026");
+
+	DeleteFileA(path.c_str());
+}
+
+void TestFindBuildString_NoStampReturnsBannerOnly(EQGameScanner& scanner)
+{
+	static const char kData[] = "(Release Client #12)\0\0unrelated\0";
+	auto path				  = MakeTempFilePath(".exe");
+	WriteBinaryFile(path, BytesOf(kData, sizeof(kData)));
+
+	scanner.setExe((TCHAR*)path.c_str());
+	CHECK(scanner.findBuildString() == "Release Client #12");
+
+	DeleteFileA(path.c_str());
+}
+
+void TestFindBuildString_NoBannerReturnsEmpty(EQGameScanner& scanner)
+{
+	static const char kData[] = "Release Client #\0 12:09:09\0Nov 12 2026\0";
+	auto path				  = MakeTempFilePath(".exe");
+	WriteBinaryFile(path, BytesOf(kData, sizeof(kData)));
+
+	scanner.setExe((TCHAR*)path.c_str());
+	CHECK(scanner.findBuildString().empty());
+
+	DeleteFileA(path.c_str());
+}
+
+void TestComputeClientHash_KnownSha1(EQGameScanner& scanner)
+{
+	auto path = MakeTempFilePath(".exe");
+	WriteBinaryFile(path, BytesOf("abc", 3));
+
+	scanner.setExe((TCHAR*)path.c_str());
+	CHECK(scanner.computeClientHash() == "a9993e364706816aba3e25717850c26c9cd0d89d");
+
+	DeleteFileA(path.c_str());
+}
+
+void TestComputeClientHash_MissingFileReturnsEmpty(EQGameScanner& scanner)
+{
+	scanner.setExe((TCHAR*)MakeTempFilePath(".missing").c_str());
+	CHECK(scanner.computeClientHash().empty());
+}
+
 } // namespace
 
 int main()
@@ -328,6 +389,11 @@ int main()
 	TestFindEQAbsolutePointer_NonPEFileReturnsZero(scanner);
 	TestReadEscapeStrings_DecodesRealPatternShape(ini);
 	TestReadEscapeStrings_MalformedEscapeIsSkippedNotFatal(ini);
+	TestFindBuildString_ParsesBannerAndBuildStamp(scanner);
+	TestFindBuildString_NoStampReturnsBannerOnly(scanner);
+	TestFindBuildString_NoBannerReturnsEmpty(scanner);
+	TestComputeClientHash_KnownSha1(scanner);
+	TestComputeClientHash_MissingFileReturnsEmpty(scanner);
 
 	std::cout << (g_checks - g_failures) << "/" << g_checks << " checks passed" << std::endl;
 	return g_failures == 0 ? 0 : 1;

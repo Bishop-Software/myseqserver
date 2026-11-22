@@ -55,7 +55,19 @@ public:
 	bool ScanExecutable(HWND hDlg, IniReaderInterface* ir_intf, NetworkServerInterface* net_intf, bool write_out = false);
 	bool ScanSecondary(HWND hDlg, IniReaderInterface* ir_intf, NetworkServerInterface* net_intf, bool write_out = false);
 
+	// SHA-1 of the executable as 40 lowercase hex chars; "" on failure.
+	// Identifies the exact client build, unlike the file-mtime PatchDate.
+	std::string computeClientHash() const;
+
+	// "Release Client #N HH:MM:SS Mmm dd yyyy", assembled from the client's
+	// "(Release Client #N)" crash banner and the __TIME__/__DATE__ literals
+	// stored right after it. Returns just "Release Client #N" if the
+	// time/date literals aren't found nearby, or "" if there's no banner.
+	std::string findBuildString() const;
+
 private:
+	bool readExecutable(std::vector<BYTE>& data) const;
+	static void normalizeHexEntry(IniReaderInterface* ir_intf, const char* section, const char* key, QWORD value);
 	bool compareData(PBYTE data, PBYTE byteMask, PCHAR charMask);
 
 	struct PESection
